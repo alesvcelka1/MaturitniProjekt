@@ -34,19 +34,10 @@
 
 | Fáze | Popis | Plánovaný termín |
 |------|--------|------------------|
-| **Příprava** | Analýza tématu, stanovení cílů, výběr vhodných technologií | září 2024 |
-| **Učení se technologiím** | Seznámení s Flutterem, jazykem Dart, SQLite a tvorbou UI | říjen–listopad 2024 |
-| **Návrh aplikace** | Návrh struktury aplikace, databázového modelu, wireframy, UX/UI | prosinec 2024 |
-| **Vývoj základních funkcí** | Záznam tréninků, databázová logika, kalendář | leden 2025 |
-| **Rozšíření funkcí** | Přidání grafů, videí, tréninkových plánů, offline režim | únor 2025 |
-| **Testování a ladění** | Opravy chyb, optimalizace, testování na různých zařízeních | březen 2025 |
-| **Dokončení a dokumentace** | Finalizace projektu, psaní dokumentace, příprava prezentace | duben 2025 |
-
----
-
-## Stav projektu
-
-Projekt je ve fázi plánování a příprav. Realizace začne ve školním roce 2024/2025 jako součást maturitní práce.  
-Tento repozitář bude průběžně aktualizován podle postupu vývoje.
-
-
+| **Příprava** | Analýza tématu, stanovení cílů, výběr vhodných technologií | červenec-srpen 2025 |
+| **Učení se technologiím** | Seznámení s Flutterem, jazykem Dart, SQLite a tvorbou UI | září 2025 |
+| **Návrh aplikace** | Návrh struktury aplikace, databázového modelu, wireframy, UX/UI | září 2025 |
+| **Vývoj základních funkcí** | Záznam tréninků, databázová logika, kalendář | říjen-listopad 2025 |
+| **Rozšíření funkcí** | Přidání grafů, videí, tréninkových plánů, offline režim | listopad 2025 |
+| **Testování a ladění** | Opravy chyb, optimalizace, testování na různých zařízeních | prosinec 2025 |
+| **Dokončení a dokumentace** | Finalizace projektu, psaní dokumentace, příprava prezentace | leden 2025 |
