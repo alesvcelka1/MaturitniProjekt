@@ -21,8 +21,8 @@
 
 | Nástroj | Účel |
 |--------|--------|
-| [Flutter](https://flutter.dev) | Vývoj multiplatformní mobilní aplikace (Android/iOS) |
-| [Dart](https://dart.dev) | Programovací jazyk používaný ve Flutteru |
+| [?]| Vývoj multiplatformní mobilní aplikace |
+| [Dart](https://dart.dev) |  |
 | [sqflite](https://pub.dev/packages/sqflite) | Práce s lokální SQLite databází |
 | [fl_chart](https://pub.dev/packages/fl_chart) | Tvorba grafů a statistik |
 | [video_player](https://pub.dev/packages/video_player) | Přehrávání lokálních videí |
