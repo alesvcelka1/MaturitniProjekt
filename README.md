@@ -1,6 +1,6 @@
-# D-Fit – Osobní fitness deník
+# FitLog – Osobní fitness deník
 
-**D-Fit** je mobilní aplikace ve vývoji, která bude sloužit jako osobní fitness deník pro sledování tréninků, pokroku a techniky cvičení. Aplikace je vyvíjena jako maturitní projekt s důrazem na praktické využití, jednoduchost a přehlednost.
+**FitLog** je mobilní aplikace ve vývoji, která bude sloužit jako osobní fitness deník pro sledování tréninků, pokroku a techniky cvičení. Aplikace je vyvíjena jako maturitní projekt s důrazem na praktické využití, jednoduchost a přehlednost.
 
 ---
 
@@ -21,10 +21,9 @@
 
 | Nástroj | Účel |
 |--------|--------|
-| [?]| Vývoj multiplatformní mobilní aplikace |
+| [Flutter]| Vývoj multiplatformní mobilní aplikace |
 | [Dart](https://dart.dev) |  |
 | [sqflite](https://pub.dev/packages/sqflite) | Práce s lokální SQLite databází |
-| [fl_chart](https://pub.dev/packages/fl_chart) | Tvorba grafů a statistik |
 | [video_player](https://pub.dev/packages/video_player) | Přehrávání lokálních videí |
 | [url_launcher](https://pub.dev/packages/url_launcher) | Otevírání externích odkazů (např. YouTube) |
 
