@@ -5,9 +5,9 @@ Cílem je vytvořit **osobní fitness deník** s možností online coachingu –
 
 ---
 
-## ✨ Funkce (plánované i hotové)
-- ✅ Přehledné zobrazení tréninků (cviky, série, opakování, váhy)  
-- ✅ Přihlášení uživatele (Firebase Auth)  
+## ✨ Funkce
+- ⏳ Přehledné zobrazení tréninků (cviky, série, opakování, váhy)  
+- ⏳ Přihlášení uživatele (Firebase Auth)  
 - ⏳ Nahrávání a přehrávání videí k cvikům (Firebase Storage)  
 - ⏳ Ukládání tréninků do databáze (Firebase Firestore)  
 - ⏳ Role trenér / klient (odlišné pohledy)  
