@@ -1,22 +1,4 @@
-<<<<<<< HEAD
-# mat_app
-
-A new Flutter project.
-
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-=======
-# 🏋️‍♂️ Maturitní Projekt – Fitness App (FitLog)
+# 🏋️‍♂️ Maturitní projekt – Fitness App
 
 Aplikace vyvíjená ve Flutteru jako maturitní projekt.  
 Cílem je vytvořit **osobní fitness deník** s možností online coachingu – trenér může posílat tréninky a klient je může vyplňovat, sledovat progres a nahrávat videa pro zpětnou vazbu.
@@ -41,4 +23,4 @@ Cílem je vytvořit **osobní fitness deník** s možností online coachingu –
 - [SQLite](https://www.sqlite.org/) – lokální ukládání (plánováno)  
 
 ---
->>>>>>> 4a356f5d6f2e39a76068222a218245523b3c8c79
+>>>>>>> 
