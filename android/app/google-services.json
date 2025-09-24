@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "458625647709",
+    "project_id": "mat-app-bc99c",
+    "storage_bucket": "mat-app-bc99c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:458625647709:android:fb3658283ccf3f01d079b4",
+        "android_client_info": {
+          "package_name": "com.example.mat_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAhPpkCTvhEYqqsd2UEd5hSijEK1TiWQHs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
