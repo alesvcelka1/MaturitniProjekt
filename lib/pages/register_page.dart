@@ -1,22 +1,21 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
-import 'register_page.dart';
 
-class LoginPage extends StatefulWidget {
+class RegisterPage extends StatefulWidget {
   @override
-  _LoginPageState createState() => _LoginPageState();
+  _RegisterPageState createState() => _RegisterPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _RegisterPageState extends State<RegisterPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  String _role = "client";
   final _authService = AuthService();
   final _formKey = GlobalKey<FormState>();
-
   bool _isLoading = false;
   String? _errorMessage;
 
-  Future<void> _login() async {
+  Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
@@ -24,15 +23,20 @@ class _LoginPageState extends State<LoginPage> {
       _errorMessage = null;
     });
 
-    final error = await _authService.login(
+    final error = await _authService.register(
       _emailController.text.trim(),
       _passwordController.text.trim(),
+      _role,
     );
 
     setState(() {
       _isLoading = false;
       _errorMessage = error;
     });
+
+    if (error == null) {
+      Navigator.pop(context); // zpět na login
+    }
   }
 
   @override
@@ -63,7 +67,7 @@ class _LoginPageState extends State<LoginPage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Text(
-                        "Vítej zpět",
+                        "Vytvoř si účet",
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
@@ -72,12 +76,11 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        "Přihlas se pro pokračování",
+                        "Zadej údaje pro registraci",
                         style: TextStyle(fontSize: 16, color: Colors.grey),
                       ),
                       const SizedBox(height: 32),
 
-                      // Email
                       TextFormField(
                         controller: _emailController,
                         decoration: const InputDecoration(
@@ -87,7 +90,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return "Zadej svůj e-mail";
+                            return "Zadej e-mail";
                           }
                           if (!value.contains("@")) {
                             return "Zadej platný e-mail";
@@ -97,7 +100,6 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Heslo
                       TextFormField(
                         controller: _passwordController,
                         obscureText: true,
@@ -108,7 +110,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return "Zadej své heslo";
+                            return "Zadej heslo";
                           }
                           if (value.length < 6) {
                             return "Heslo musí mít alespoň 6 znaků";
@@ -116,21 +118,31 @@ class _LoginPageState extends State<LoginPage> {
                           return null;
                         },
                       ),
+                      const SizedBox(height: 16),
+
+                      DropdownButtonFormField<String>(
+                        value: _role,
+                        items: const [
+                          DropdownMenuItem(value: "trainer", child: Text("Trenér")),
+                          DropdownMenuItem(value: "client", child: Text("Klient")),
+                        ],
+                        onChanged: (val) => setState(() => _role = val!),
+                        decoration: const InputDecoration(
+                          labelText: "Vyber roli",
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
                       const SizedBox(height: 24),
 
                       if (_errorMessage != null)
-                        Text(
-                          _errorMessage!,
-                          style: const TextStyle(color: Colors.red),
-                        ),
+                        Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
 
                       const SizedBox(height: 16),
 
-                      // Přihlásit
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: _isLoading ? null : _login,
+                          onPressed: _isLoading ? null : _register,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.orange,
                             foregroundColor: Colors.white,
@@ -141,30 +153,8 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           child: _isLoading
                               ? const CircularProgressIndicator(color: Colors.white)
-                              : const Text("Přihlásit se", style: TextStyle(fontSize: 18)),
+                              : const Text("Zaregistrovat se", style: TextStyle(fontSize: 18)),
                         ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // Registrace
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text("Nemáš účet?"),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => RegisterPage()),
-                              );
-                            },
-                            child: const Text(
-                              "Zaregistruj se",
-                              style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ],
                       ),
                     ],
                   ),
