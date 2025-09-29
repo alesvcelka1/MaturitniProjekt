@@ -63,7 +63,7 @@ class _LoginPageState extends State<LoginPage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Text(
-                        "Vítej zpět",
+                        "Vítejte!",
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,

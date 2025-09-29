@@ -9,6 +9,7 @@ class RegisterPage extends StatefulWidget {
 class _RegisterPageState extends State<RegisterPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   String _role = "client";
   final _authService = AuthService();
   final _formKey = GlobalKey<FormState>();
@@ -120,17 +121,53 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       const SizedBox(height: 16),
 
-                      DropdownButtonFormField<String>(
-                        value: _role,
-                        items: const [
-                          DropdownMenuItem(value: "trainer", child: Text("Trenér")),
-                          DropdownMenuItem(value: "client", child: Text("Klient")),
-                        ],
-                        onChanged: (val) => setState(() => _role = val!),
+                      TextFormField(
+                        controller: _confirmPasswordController,
+                        obscureText: true,
                         decoration: const InputDecoration(
-                          labelText: "Vyber roli",
+                          labelText: "Potvrď heslo",
+                          prefixIcon: Icon(Icons.lock_outline, color: Colors.orange),
                           border: OutlineInputBorder(),
                         ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return "Potvrď své heslo";
+                          }
+                          if (value != _passwordController.text) {
+                            return "Hesla se neshodují";
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          "Vyber svou roli:",
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Column(
+                        children: [
+                          RadioListTile<String>(
+                            title: const Text("Klient"),
+                            value: "client",
+                            groupValue: _role,
+                            activeColor: Colors.orange,
+                            contentPadding: EdgeInsets.zero,
+                            onChanged: (value) => setState(() => _role = value!),
+                          ),
+                          RadioListTile<String>(
+                            title: const Text("Trenér"),
+                            value: "trainer",
+                            groupValue: _role,
+                            activeColor: Colors.orange,
+                            contentPadding: EdgeInsets.zero,
+                            onChanged: (value) => setState(() => _role = value!),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 24),
 
@@ -155,6 +192,23 @@ class _RegisterPageState extends State<RegisterPage> {
                               ? const CircularProgressIndicator(color: Colors.white)
                               : const Text("Zaregistrovat se", style: TextStyle(fontSize: 18)),
                         ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Návrat na login
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text("Už máš účet?"),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text(
+                              "Přihlas se",
+                              style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
