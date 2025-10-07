@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'register_page.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -39,6 +40,27 @@ class _LoginPageState extends State<LoginPage> {
       setState(() => _errorMessage = error);
     }
 
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loginWithGoogle() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    print('🎮 Google přihlášení...');
+    final error = await _authService.signInWithGoogle();
+    
+    if (error != null) {
+      print('❌ Google přihlášení chyba: $error');
+      setState(() => _errorMessage = error);
+    } else {
+      print('✅ Google přihlášení úspěšné!');
+    }
+    
     if (mounted) {
       setState(() => _isLoading = false);
     }
@@ -172,6 +194,48 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             child: const Text(
                               "Přihlásit se",
+                              style: TextStyle(fontSize: 18),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Oddělovač
+                        Row(
+                          children: [
+                            const Expanded(child: Divider()),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 16),
+                              child: Text("nebo", style: TextStyle(color: Colors.grey)),
+                            ),
+                            const Expanded(child: Divider()),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Google přihlášení
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _isLoading ? null : _loginWithGoogle,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.black87,
+                              side: const BorderSide(color: Colors.grey),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            icon: const FaIcon(
+                              FontAwesomeIcons.google,
+                              color: Colors.red,
+                              size: 20,
+                            ),
+                            label: const Text(
+                              "Přihlásit se přes Google",
                               style: TextStyle(fontSize: 18),
                             ),
                           ),
