@@ -10,7 +10,6 @@ class _RegisterPageState extends State<RegisterPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  String _role = "client";
   final _authService = AuthService();
   final _formKey = GlobalKey<FormState>();
 
@@ -31,7 +30,6 @@ class _RegisterPageState extends State<RegisterPage> {
       final error = await _authService.register(
         _emailController.text.trim(),
         _passwordController.text.trim(),
-        _role,
       );
 
       if (!mounted) return;
@@ -201,42 +199,6 @@ class _RegisterPageState extends State<RegisterPage> {
                             }
                             return null;
                           },
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Výběr role
-                        const Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            "Vyber svou roli:",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Column(
-                          children: [
-                            RadioListTile<String>(
-                              title: const Text("Klient"),
-                              value: "client",
-                              groupValue: _role,
-                              activeColor: Colors.orange,
-                              contentPadding: EdgeInsets.zero,
-                              onChanged: (value) =>
-                                  setState(() => _role = value!),
-                            ),
-                            RadioListTile<String>(
-                              title: const Text("Trenér"),
-                              value: "trainer",
-                              groupValue: _role,
-                              activeColor: Colors.orange,
-                              contentPadding: EdgeInsets.zero,
-                              onChanged: (value) =>
-                                  setState(() => _role = value!),
-                            ),
-                          ],
                         ),
                         const SizedBox(height: 24),
 

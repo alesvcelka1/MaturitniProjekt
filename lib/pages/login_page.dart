@@ -32,7 +32,7 @@ class _LoginPageState extends State<LoginPage> {
     );
 
     if (error == null) {
-      // Let AuthWrapper handle routing based on role; just stop loading here
+      // Přihlášení úspěšné - AuthWrapper se postará o přesměrování
       if (!mounted) return;
       setState(() => _isLoading = false);
       return;

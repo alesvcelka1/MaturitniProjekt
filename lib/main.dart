@@ -17,36 +17,118 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Tréninková aplikace',
+      title: 'Fitness App Pro',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.orange,
-        scaffoldBackgroundColor: Colors.white,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.orange,
-          foregroundColor: Colors.white,
-          elevation: 0,
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFFFF6B35),
+          brightness: Brightness.light,
         ),
+        scaffoldBackgroundColor: const Color(0xFFF8F9FA),
+        fontFamily: 'SF Pro Display',
+        
+        // AppBar Theme
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          centerTitle: true,
+          titleTextStyle: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
+        
+        // Button Themes
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange,
+            backgroundColor: const Color(0xFF667EEA),
             foregroundColor: Colors.white,
-            textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            padding: const EdgeInsets.symmetric(vertical: 14),
+            elevation: 0,
+            shadowColor: Colors.transparent,
+            textStyle: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(Radius.circular(12)),
+              borderRadius: BorderRadius.circular(12),
             ),
           ),
         ),
+        
+        // Input Decoration Theme
         inputDecorationTheme: InputDecorationTheme(
-          focusedBorder: OutlineInputBorder(
-            borderSide: const BorderSide(color: Colors.orange, width: 2),
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
+          border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
           ),
           enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.orange.shade200),
             borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(
+              color: Color(0xFFE5E7EB),
+              width: 1,
+            ),
           ),
-          labelStyle: const TextStyle(color: Colors.black87),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(
+              color: Color(0xFF667EEA),
+              width: 2,
+            ),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(
+              color: Color(0xFFE53E3E),
+              width: 1,
+            ),
+          ),
+          labelStyle: const TextStyle(
+            color: Color(0xFF9CA3AF),
+            fontSize: 16,
+          ),
+          hintStyle: const TextStyle(
+            color: Color(0xFF9CA3AF),
+            fontSize: 16,
+          ),
+        ),
+        
+        // Card Theme
+        cardTheme: CardThemeData(
+          elevation: 0,
+          color: Colors.white,
+          shadowColor: Colors.black.withOpacity(0.05),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        
+        // Bottom Navigation Bar Theme
+        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          selectedItemColor: Color(0xFF667EEA),
+          unselectedItemColor: Color(0xFF9CA3AF),
+          type: BottomNavigationBarType.fixed,
+        ),
+        
+        // Page Transitions
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: {
+            TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.windows: FadeUpwardsPageTransitionsBuilder(),
+            TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+          },
         ),
       ),
       home: const AuthWrapper(),

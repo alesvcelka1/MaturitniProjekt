@@ -8,8 +8,8 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// Registrace uživatele s rolí (uloženou do Firestore)
-  Future<String?> register(String email, String password, String role) async {
+  /// Registrace uživatele
+  Future<String?> register(String email, String password) async {
     try {
       // 1) vytvoření účtu v Firebase Auth
       UserCredential cred = await _auth.createUserWithEmailAndPassword(
@@ -20,7 +20,6 @@ class AuthService {
       // 2) uložení dalších údajů do Firestore (asynchronně pro rychlost)
       _firestore.collection('users').doc(cred.user!.uid).set({
         'email': email,
-        'role': role,
         'createdAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true)).catchError((error) {
         print('Firestore chyba (ale registrace pokračuje): $error');
@@ -97,7 +96,6 @@ class AuthService {
         print('📝 Vytvářím nový uživatelský dokument...');
         await userDoc.set({
           'email': userCred.user!.email,
-          'role': 'client', // defaultní role pro Google uživatele
           'createdAt': FieldValue.serverTimestamp(),
           'provider': 'google',
         }, SetOptions(merge: true));
@@ -122,19 +120,8 @@ class AuthService {
   }
 
   /// Odhlášení
-  Future<void> logout() async {
+  Future<void> signOut() async {
     await _auth.signOut();
-  }
-
-  /// Získání role aktuálně přihlášeného uživatele
-  Future<String?> getUserRole() async {
-    final user = _auth.currentUser;
-    if (user == null) return null;
-
-    final snap = await _firestore.collection('users').doc(user.uid).get();
-    if (!snap.exists) return null;
-
-    return snap.data()?['role'] as String?;
   }
 
   /// Stream aktuálního uživatele (null pokud odhlášený)
