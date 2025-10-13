@@ -17,6 +17,8 @@ dependencies:
   google_sign_in: ^6.3.0
   font_awesome_flutter: ^10.7.0
   cupertino_icons: ^1.0.8
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^5.0.0
 
 dev_dependencies:
   flutter_test:
