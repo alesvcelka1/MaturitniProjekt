@@ -1,11 +1,74 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// 🔶 Stránka pro trenéry - zobrazuje QR kód s UID trenéra
 /// Klient naskenuje tento QR kód a propojí se s trenérem
-class TrainerQrPage extends StatelessWidget {
+class TrainerQrPage extends StatefulWidget {
   const TrainerQrPage({super.key});
+
+  @override
+  State<TrainerQrPage> createState() => _TrainerQrPageState();
+}
+
+class _TrainerQrPageState extends State<TrainerQrPage> {
+  bool _isSettingRole = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ensureTrainerRole();
+  }
+
+  /// Zajistí, že uživatel má v Firestore nastavenou roli 'trainer'
+  /// Volá se pouze při generování QR kódu
+  Future<void> _ensureTrainerRole() async {
+    final User? user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    setState(() => _isSettingRole = true);
+
+    try {
+      final FirebaseFirestore firestore = FirebaseFirestore.instance;
+      final DocumentReference userDoc = firestore.collection('users').doc(user.uid);
+
+      // Zkontrolujeme, zda už má uživatel roli
+      final DocumentSnapshot docSnapshot = await userDoc.get();
+      final userData = docSnapshot.data() as Map<String, dynamic>?;
+      final currentRole = userData?['role'] as String?;
+
+      // Nastavíme roli pouze pokud ji ještě nemá nebo není trenér
+      if (currentRole != 'trainer') {
+        await userDoc.set({
+          'role': 'trainer',
+          'email': user.email,
+          'display_name': user.displayName,
+          'clients': [], // Inicializace prázdného seznamu klientů
+          'trainer_since': FieldValue.serverTimestamp(),
+          'updated_at': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
+        print('✅ Uživatel ${user.email} nastaven jako trenér');
+      } else {
+        print('ℹ️ Uživatel ${user.email} už je trenér');
+      }
+    } catch (e) {
+      print('❌ Chyba při nastavování role trenéra: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Chyba při nastavování role: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSettingRole = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +88,20 @@ class TrainerQrPage extends StatelessWidget {
             'Nejsi přihlášený!',
             style: TextStyle(fontSize: 18, color: Colors.red),
           ),
+        ),
+      );
+    }
+
+    // Show loading if setting role
+    if (_isSettingRole) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Můj QR kód'),
+          backgroundColor: Colors.orange,
+          foregroundColor: Colors.white,
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(),
         ),
       );
     }
@@ -143,21 +220,34 @@ class TrainerQrPage extends StatelessWidget {
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Row(
+                  child: Column(
                     children: [
-                      const Icon(
-                        Icons.info_outline,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Klient si stáhne aplikaci, vytvoří účet a naskenuje tento QR kód pro propojení',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.white.withOpacity(0.9),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.people_outline,
+                            color: Colors.white,
+                            size: 20,
                           ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Text(
+                              'Automatické propojení s klienty',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '• Klient naskenuje tento QR kód\n• Automaticky se nastaví jako tvůj klient\n• Uvidíš ho v seznamu klientů',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.white.withOpacity(0.9),
                         ),
                       ),
                     ],

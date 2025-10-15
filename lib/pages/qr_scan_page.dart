@@ -64,34 +64,71 @@ class _QrScanPageState extends State<QrScanPage> {
       final DocumentReference clientDoc = firestore.collection('users').doc(clientId);
       final DocumentReference trainerDoc = firestore.collection('users').doc(trainerId);
 
-      // 5️⃣ Kontrola existence trenéra
+      // 5️⃣ Kontrola existence trenéra a jeho role
       final DocumentSnapshot trainerSnapshot = await trainerDoc.get();
       if (!trainerSnapshot.exists) {
         _showErrorSnackBar('Trenér s tímto ID neexistuje!');
         return;
       }
 
-      // 6️⃣ Batch operace pro atomické aktualizace
+      final trainerData = trainerSnapshot.data() as Map<String, dynamic>?;
+      final trainerRole = trainerData?['role'] as String?;
+      
+      if (trainerRole != 'trainer') {
+        _showErrorSnackBar('Naskenovaný QR kód nepatří platným trenérovi!');
+        return;
+      }
+
+      final trainerName = trainerData?['display_name'] as String? ?? 
+                         trainerData?['email'] as String? ?? 
+                         'Trenér';
+
+      // 6️⃣ Kontrola, zda už klient není propojený s jiným trenérem
+      final DocumentSnapshot clientSnapshot = await clientDoc.get();
+      if (clientSnapshot.exists) {
+        final clientData = clientSnapshot.data() as Map<String, dynamic>?;
+        final existingTrainerId = clientData?['trainer_id'] as String?;
+        
+        if (existingTrainerId != null && existingTrainerId != trainerId) {
+          _showErrorSnackBar('Už jsi propojený s jiným trenérem!');
+          return;
+        }
+        
+        if (existingTrainerId == trainerId) {
+          _showSuccessSnackBar('Už jsi propojený s tímto trenérem: $trainerName');
+          await Future.delayed(const Duration(seconds: 2));
+          if (mounted) {
+            Navigator.pop(context, true);
+          }
+          return;
+        }
+      }
+
+      // 7️⃣ Batch operace pro atomické aktualizace
       final WriteBatch batch = firestore.batch();
 
       // Aktualizace klienta - nastavení role a přiřazení trenéra
-      batch.update(clientDoc, {
+      batch.set(clientDoc, {
         'role': 'client',
         'trainer_id': trainerId,
+        'trainer_name': trainerName,
+        'email': currentUser.email,
+        'display_name': currentUser.displayName,
         'connected_at': FieldValue.serverTimestamp(),
-      });
+      }, SetOptions(merge: true));
 
-      // Aktualizace trenéra - přidání klienta do seznamu
-      batch.update(trainerDoc, {
+      // Aktualizace trenéra - přidání klienta do seznamu (zajistí, že role je trainer)
+      batch.set(trainerDoc, {
+        'role': 'trainer', // Zajistí, že trenér má správnou roli
         'clients': FieldValue.arrayUnion([clientId]),
-      });
+      }, SetOptions(merge: true));
 
-      // 7️⃣ Spuštění batch operace
+      // 8️⃣ Spuštění batch operace
       await batch.commit();
 
-      // 8️⃣ Zobrazení úspěšné zprávy
+      // 9️⃣ Zobrazení úspěšné zprávy
       if (mounted) {
-        _showSuccessSnackBar('Úspěšně jsi se propojil s trenérem!');
+        _showSuccessSnackBar('Úspěšně jsi se propojil s trenérem $trainerName!');
         
         // Návrat na předchozí obrazovku po krátkém čekání
         await Future.delayed(const Duration(seconds: 2));
@@ -101,7 +138,7 @@ class _QrScanPageState extends State<QrScanPage> {
       }
 
     } catch (e) {
-      // 9️⃣ Zpracování chyb
+      // 🔟 Zpracování chyb
       debugPrint('Chyba při propojování: $e');
       _showErrorSnackBar('Chyba při propojování: ${e.toString()}');
     } finally {
@@ -271,14 +308,27 @@ class _QrScanPageState extends State<QrScanPage> {
                 color: Colors.black.withOpacity(0.7),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Text(
-                'Namiř kameru na QR kód od trenéra',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
+              child: const Column(
+                children: [
+                  Text(
+                    'Namiř kameru na QR kód trenéra',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Automaticky se staneš klientem',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
             ),
           ),

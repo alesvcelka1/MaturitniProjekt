@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'services/auth_service.dart';
 import 'pages/login_page.dart';
-import 'pages/home_page.dart';
+import 'pages/shared_home_page.dart';
 
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
@@ -22,7 +22,9 @@ class AuthWrapper extends StatelessWidget {
 
         if (!snapshot.hasData) return LoginPage();
 
-        return const HomePage();
+        // All authenticated users go to the unified SharedHomePage
+        // Role determination happens inside SharedHomePage based on Firestore data
+        return const SharedHomePage();
       },
     );
   }

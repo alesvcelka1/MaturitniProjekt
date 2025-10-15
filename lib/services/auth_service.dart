@@ -21,6 +21,7 @@ class AuthService {
       _firestore.collection('users').doc(cred.user!.uid).set({
         'email': email,
         'createdAt': FieldValue.serverTimestamp(),
+        'role': 'client', // DŮLEŽITÉ: defaultní role
       }, SetOptions(merge: true)).catchError((error) {
         print('Firestore chyba (ale registrace pokračuje): $error');
       });
@@ -98,6 +99,7 @@ class AuthService {
           'email': userCred.user!.email,
           'createdAt': FieldValue.serverTimestamp(),
           'provider': 'google',
+          'role': 'client', // DŮLEŽITÉ: defaultní role
         }, SetOptions(merge: true));
       } else {
         print('📖 Uživatelský dokument už existuje');
