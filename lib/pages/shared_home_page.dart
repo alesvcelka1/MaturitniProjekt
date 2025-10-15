@@ -5,6 +5,7 @@ import 'dart:async';
 import 'trainer_workouts_page.dart';
 import 'trainer_qr_page.dart';
 import 'qr_scan_page.dart';
+import 'workout_detail_page.dart';
 import '../services/auth_service.dart';
 
 /// 🏠 Unified home page for both trainers and clients
@@ -1269,7 +1270,15 @@ class _WorkoutsPage extends StatelessWidget {
                     ],
                   ),
                   onTap: () {
-                    // TODO: Navigate to workout detail
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => WorkoutDetailPage(
+                          workoutId: doc.id,
+                          workoutData: data,
+                        ),
+                      ),
+                    );
                   },
                 ),
               );
