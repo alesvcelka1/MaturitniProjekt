@@ -12,6 +12,7 @@ class DatabaseService {
   static CollectionReference get exercises => _firestore.collection('exercises');
   static CollectionReference get completedWorkouts => _firestore.collection('completed_workouts');
   static CollectionReference get personalRecords => _firestore.collection('personal_records');
+  static CollectionReference get scheduledWorkouts => _firestore.collection('scheduled_workouts');
 
   /// Vytvoří ukázková data v databázi
   static Future<void> seedDatabase() async {
@@ -860,4 +861,172 @@ class DatabaseService {
       return false;
     }
   }
+
+  // ========== SCHEDULED WORKOUTS (KALENDÁŘ) ==========
+
+  /// Naplánuje trénink na konkrétní datum
+  /// 
+  /// Struktura scheduled_workout dokumentu:
+  /// {
+  ///   'workout_id': String,          // ID tréninku
+  ///   'workout_name': String,        // název pro zobrazení
+  ///   'user_id': String,             // ID klienta
+  ///   'trainer_id': String,          // ID trenéra
+  ///   'scheduled_date': Timestamp,   // datum a čas tréninku
+  ///   'status': String,              // 'scheduled', 'completed', 'cancelled'
+  ///   'created_at': Timestamp,
+  ///   'completed_at': Timestamp?,    // kdy byl dokončen
+  ///   'notes': String?               // poznámky trenéra
+  /// }
+  static Future<String> scheduleWorkout({
+    required String workoutId,
+    required String workoutName,
+    required String userId,
+    required String trainerId,
+    required DateTime scheduledDate,
+    String? notes,
+  }) async {
+    try {
+      final doc = await scheduledWorkouts.add({
+        'workout_id': workoutId,
+        'workout_name': workoutName,
+        'user_id': userId,
+        'trainer_id': trainerId,
+        'scheduled_date': Timestamp.fromDate(scheduledDate),
+        'status': 'scheduled',
+        'created_at': FieldValue.serverTimestamp(),
+        'notes': notes,
+      });
+      
+      print('✅ Trénink naplánován na: ${scheduledDate.toString()}');
+      return doc.id;
+    } catch (e) {
+      print('❌ Chyba při plánování tréninku: $e');
+      rethrow;
+    }
+  }
+
+  /// Získá všechny naplánované tréninky pro uživatele
+  static Future<List<Map<String, dynamic>>> getUserScheduledWorkouts({
+    required String userId,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    try {
+      Query query = scheduledWorkouts
+          .where('user_id', isEqualTo: userId);
+      
+      if (startDate != null) {
+        query = query.where('scheduled_date', 
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startDate));
+      }
+      
+      if (endDate != null) {
+        query = query.where('scheduled_date', 
+            isLessThanOrEqualTo: Timestamp.fromDate(endDate));
+      }
+      
+      final snapshot = await query.get();
+      
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    } catch (e) {
+      print('❌ Chyba při načítání naplánovaných tréninků: $e');
+      return [];
+    }
+  }
+
+  /// Získá tréninky trenéra pro kalendář
+  static Future<List<Map<String, dynamic>>> getTrainerScheduledWorkouts({
+    required String trainerId,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    try {
+      Query query = scheduledWorkouts
+          .where('trainer_id', isEqualTo: trainerId);
+      
+      if (startDate != null) {
+        query = query.where('scheduled_date', 
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startDate));
+      }
+      
+      if (endDate != null) {
+        query = query.where('scheduled_date', 
+            isLessThanOrEqualTo: Timestamp.fromDate(endDate));
+      }
+      
+      final snapshot = await query.get();
+      
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    } catch (e) {
+      print('❌ Chyba při načítání tréninků trenéra: $e');
+      return [];
+    }
+  }
+
+  /// Označí naplánovaný trénink jako dokončený
+  static Future<void> completeScheduledWorkout(String scheduledWorkoutId) async {
+    try {
+      await scheduledWorkouts.doc(scheduledWorkoutId).update({
+        'status': 'completed',
+        'completed_at': FieldValue.serverTimestamp(),
+      });
+      
+      print('✅ Naplánovaný trénink dokončen');
+    } catch (e) {
+      print('❌ Chyba při dokončování naplánovaného tréninku: $e');
+      rethrow;
+    }
+  }
+
+  /// Zruší naplánovaný trénink
+  static Future<void> cancelScheduledWorkout(String scheduledWorkoutId) async {
+    try {
+      await scheduledWorkouts.doc(scheduledWorkoutId).update({
+        'status': 'cancelled',
+      });
+      
+      print('✅ Naplánovaný trénink zrušen');
+    } catch (e) {
+      print('❌ Chyba při rušení naplánovaného tréninku: $e');
+      rethrow;
+    }
+  }
+
+  /// Smaže naplánovaný trénink
+  static Future<void> deleteScheduledWorkout(String scheduledWorkoutId) async {
+    try {
+      await scheduledWorkouts.doc(scheduledWorkoutId).delete();
+      print('✅ Naplánovaný trénink smazán');
+    } catch (e) {
+      print('❌ Chyba při mazání naplánovaného tréninku: $e');
+      rethrow;
+    }
+  }
+
+  /// Přesune naplánovaný trénink na jiný datum
+  static Future<void> rescheduleWorkout(
+    String scheduledWorkoutId,
+    DateTime newDate,
+  ) async {
+    try {
+      await scheduledWorkouts.doc(scheduledWorkoutId).update({
+        'scheduled_date': Timestamp.fromDate(newDate),
+      });
+      
+      print('✅ Trénink přesunut na: ${newDate.toString()}');
+    } catch (e) {
+      print('❌ Chyba při přesouvání tréninku: $e');
+      rethrow;
+    }
+  }
 }
+

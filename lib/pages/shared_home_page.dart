@@ -7,6 +7,7 @@ import 'trainer_qr_page.dart';
 import 'qr_scan_page.dart';
 import 'workout_detail_page.dart';
 import 'progress_page.dart';
+import 'calendar_page.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
 
@@ -79,6 +80,7 @@ class _SharedHomePageState extends State<SharedHomePage> {
     final List<Widget> pages = [
       _DashboardPage(userRole: userRole, userDoc: userDoc),
       _WorkoutsPage(userRole: userRole, userDoc: userDoc),
+      CalendarPage(userRole: userRole),
       ProgressPage(userRole: userRole),
       _ProfilePage(userRole: userRole),
     ];
@@ -98,14 +100,15 @@ class _SharedHomePageState extends State<SharedHomePage> {
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildNavItem(0, Icons.home_rounded, 'Domů'),
                 _buildNavItem(1, Icons.fitness_center_rounded, 'Tréninky'),
-                _buildNavItem(2, Icons.trending_up_rounded, 'Pokrok'),
-                _buildNavItem(3, Icons.person_rounded, 'Profil'),
+                _buildNavItem(2, Icons.calendar_today_rounded, 'Kalendář'),
+                _buildNavItem(3, Icons.trending_up_rounded, 'Pokrok'),
+                _buildNavItem(4, Icons.person_rounded, 'Profil'),
               ],
             ),
           ),
