@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../widgets/exercise_selector_dialog.dart';
 
 /// Stránka pro trenéry - správa tréninků přidělených klientům
 class TrainerWorkoutsPage extends StatefulWidget {
@@ -524,6 +525,27 @@ class _TrainerWorkoutsPageState extends State<TrainerWorkoutsPage> {
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
+                TextButton.icon(
+                  onPressed: () async {
+                    final selectedExercise = await showDialog<Map<String, dynamic>>(
+                      context: context,
+                      builder: (context) => const ExerciseSelectorDialog(),
+                    );
+                    
+                    if (selectedExercise != null) {
+                      exercise['name'] = selectedExercise['name'];
+                      exercise['exercise_id'] = selectedExercise['id'];
+                      exercise['video_url'] = selectedExercise['video_url'];
+                      exercise['instructions'] = selectedExercise['instructions'];
+                      onUpdate(exercise);
+                    }
+                  },
+                  icon: const Icon(Icons.search, size: 18),
+                  label: const Text('Vybrat', style: TextStyle(fontSize: 12)),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  ),
+                ),
                 IconButton(
                   onPressed: onDelete,
                   icon: const Icon(Icons.delete, color: Colors.red),
@@ -532,23 +554,27 @@ class _TrainerWorkoutsPageState extends State<TrainerWorkoutsPage> {
               ],
             ),
             const SizedBox(height: 8),
-            TextField(
+            TextFormField(
+              key: ValueKey('exercise_name_$index'),
+              initialValue: exercise['name'] ?? '',
               decoration: const InputDecoration(
                 labelText: 'Název cviku',
                 border: OutlineInputBorder(),
                 isDense: true,
+                suffixIcon: Icon(Icons.edit, size: 18),
               ),
               onChanged: (value) {
                 exercise['name'] = value;
                 onUpdate(exercise);
               },
-              controller: TextEditingController(text: exercise['name'] ?? ''),
             ),
             const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
-                  child: TextField(
+                  child: TextFormField(
+                    key: ValueKey('exercise_sets_$index'),
+                    initialValue: (exercise['sets'] ?? 0).toString(),
                     decoration: const InputDecoration(
                       labelText: 'Série',
                       border: OutlineInputBorder(),
@@ -559,14 +585,13 @@ class _TrainerWorkoutsPageState extends State<TrainerWorkoutsPage> {
                       exercise['sets'] = int.tryParse(value) ?? 0;
                       onUpdate(exercise);
                     },
-                    controller: TextEditingController(
-                      text: (exercise['sets'] ?? 0).toString(),
-                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: TextField(
+                  child: TextFormField(
+                    key: ValueKey('exercise_reps_$index'),
+                    initialValue: (exercise['reps'] ?? 0).toString(),
                     decoration: const InputDecoration(
                       labelText: 'Opakování',
                       border: OutlineInputBorder(),
@@ -577,15 +602,14 @@ class _TrainerWorkoutsPageState extends State<TrainerWorkoutsPage> {
                       exercise['reps'] = int.tryParse(value) ?? 0;
                       onUpdate(exercise);
                     },
-                    controller: TextEditingController(
-                      text: (exercise['reps'] ?? 0).toString(),
-                    ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            TextField(
+            TextFormField(
+              key: ValueKey('exercise_load_$index'),
+              initialValue: exercise['load'] ?? '',
               decoration: const InputDecoration(
                 labelText: 'Zátěž (% z PR nebo váha)',
                 border: OutlineInputBorder(),
@@ -595,7 +619,6 @@ class _TrainerWorkoutsPageState extends State<TrainerWorkoutsPage> {
                 exercise['load'] = value;
                 onUpdate(exercise);
               },
-              controller: TextEditingController(text: exercise['load'] ?? ''),
             ),
           ],
         ),

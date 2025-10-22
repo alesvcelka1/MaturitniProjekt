@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'workout_execution_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/database_service.dart';
 
 /// Detailed view of a workout for clients
-class WorkoutDetailPage extends StatelessWidget {
+class WorkoutDetailPage extends StatefulWidget {
   final String workoutId;
   final Map<String, dynamic> workoutData;
 
@@ -13,11 +14,40 @@ class WorkoutDetailPage extends StatelessWidget {
   });
 
   @override
+  State<WorkoutDetailPage> createState() => _WorkoutDetailPageState();
+}
+
+class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
+  Map<String, Map<String, dynamic>> _userPRs = {};
+  bool _isLoadingPRs = true;
+  
+  @override
+  void initState() {
+    super.initState();
+    _loadUserPRs();
+  }
+  
+  Future<void> _loadUserPRs() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      final prs = await DatabaseService.getAllUserPRs(currentUser.uid);
+      setState(() {
+        _userPRs = prs;
+        _isLoadingPRs = false;
+      });
+    } else {
+      setState(() {
+        _isLoadingPRs = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final exercises = List<Map<String, dynamic>>.from(workoutData['exercises'] ?? []);
-    final workoutName = workoutData['workout_name'] ?? 'Bez názvu';
-    final description = workoutData['description'] ?? '';
-    final estimatedDuration = workoutData['estimated_duration'] ?? 0;
+    final exercises = List<Map<String, dynamic>>.from(widget.workoutData['exercises'] ?? []);
+    final workoutName = widget.workoutData['workout_name'] ?? 'Bez názvu';
+    final description = widget.workoutData['description'] ?? '';
+    final estimatedDuration = widget.workoutData['estimated_duration'] ?? 0;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -28,9 +58,9 @@ class WorkoutDetailPage extends StatelessWidget {
         elevation: 0,
         actions: [
           IconButton(
-            onPressed: () => _startWorkout(context),
-            icon: const Icon(Icons.play_arrow),
-            tooltip: 'Začít trénink',
+            onPressed: () => _completeWorkout(context),
+            icon: const Icon(Icons.check_circle),
+            tooltip: 'Trénink dokončen',
           ),
         ],
       ),
@@ -127,11 +157,11 @@ class WorkoutDetailPage extends StatelessWidget {
           ],
         ),
         child: ElevatedButton.icon(
-          onPressed: () => _startWorkout(context),
-          icon: const Icon(Icons.play_arrow),
-          label: const Text('Začít trénink'),
+          onPressed: () => _completeWorkout(context),
+          icon: const Icon(Icons.check_circle),
+          label: const Text('Trénink dokončen'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange,
+            backgroundColor: Colors.green,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(
@@ -173,6 +203,29 @@ class WorkoutDetailPage extends StatelessWidget {
     final reps = exercise['reps'] ?? 0;
     final load = exercise['load'] ?? '';
     final note = exercise['note'] ?? '';
+    
+    // Vypočítej přepočítanou váhu pokud je load v procentech
+    String displayLoad = load;
+    double? calculatedWeight;
+    
+    if (load.contains('%') && !_isLoadingPRs) {
+      final normalizedName = name.toLowerCase().trim();
+      final pr = _userPRs[normalizedName];
+      
+      if (pr != null) {
+        final percentageStr = load.replaceAll('%', '').trim();
+        final percentage = double.tryParse(percentageStr);
+        
+        if (percentage != null) {
+          final prWeight = pr['weight'] as double;
+          calculatedWeight = (prWeight * percentage) / 100.0;
+          displayLoad = '$load (${calculatedWeight.toStringAsFixed(1)} kg)';
+        }
+      } else {
+        // PR neexistuje
+        displayLoad = '$load (PR neznámé)';
+      }
+    }
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -224,10 +277,12 @@ class WorkoutDetailPage extends StatelessWidget {
                   const SizedBox(width: 8),
                 ],
                 if (load.isNotEmpty) ...[
-                  _buildDetailChip(
-                    icon: Icons.fitness_center,
-                    label: load,
-                    color: Colors.green,
+                  Expanded(
+                    child: _buildDetailChip(
+                      icon: Icons.fitness_center,
+                      label: displayLoad,
+                      color: calculatedWeight != null ? Colors.green : Colors.grey,
+                    ),
                   ),
                 ],
               ],
@@ -293,15 +348,55 @@ class WorkoutDetailPage extends StatelessWidget {
     );
   }
 
-  void _startWorkout(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => WorkoutExecutionPage(
-          workoutId: workoutId,
-          workoutData: workoutData,
+  void _completeWorkout(BuildContext context) async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        final exercises = List<Map<String, dynamic>>.from(widget.workoutData['exercises'] ?? []);
+        
+        await DatabaseService.saveCompletedWorkout(
+          workoutId: widget.workoutId,
+          workoutName: widget.workoutData['workout_name'] ?? 'Neznámý trénink',
+          userId: currentUser.uid,
+          durationSeconds: 0, // Bez trackingu času
+          completedExercises: exercises.map((exercise) => {
+            'name': exercise['name'],
+            'planned_sets': exercise['sets'] ?? 1,
+            'completed_sets': exercise['sets'] ?? 1, // Označíme vše jako dokončené
+            'reps': exercise['reps'] ?? 0,
+            'load': exercise['load'] ?? '',
+          }).toList(),
+        );
+
+        if (!context.mounted) return;
+        
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Text('🎉 Trénink dokončen!'),
+            content: const Text('Trénink byl úspěšně označen jako dokončený.'),
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close dialog
+                  Navigator.of(context).pop(true); // Go back to workout list with completion signal
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                child: const Text('Hotovo'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Chyba při označování tréninku: $e'),
+          backgroundColor: Colors.red,
         ),
-      ),
-    );
+      );
+    }
   }
 }

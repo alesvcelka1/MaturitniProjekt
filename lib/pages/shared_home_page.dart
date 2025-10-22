@@ -6,7 +6,9 @@ import 'trainer_workouts_page.dart';
 import 'trainer_qr_page.dart';
 import 'qr_scan_page.dart';
 import 'workout_detail_page.dart';
+import 'progress_page.dart';
 import '../services/auth_service.dart';
+import '../services/database_service.dart';
 
 /// 🏠 Unified home page for both trainers and clients
 /// Dynamically shows features based on user role from Firestore
@@ -77,7 +79,7 @@ class _SharedHomePageState extends State<SharedHomePage> {
     final List<Widget> pages = [
       _DashboardPage(userRole: userRole, userDoc: userDoc),
       _WorkoutsPage(userRole: userRole, userDoc: userDoc),
-      _ProgressPage(userRole: userRole),
+      ProgressPage(userRole: userRole),
       _ProfilePage(userRole: userRole),
     ];
 
@@ -1016,14 +1018,40 @@ class _DashboardPage extends StatelessWidget {
 }
 
 /// 💪 Workouts page - shows different content based on role
-class _WorkoutsPage extends StatelessWidget {
+class _WorkoutsPage extends StatefulWidget {
   final String? userRole;
   final DocumentSnapshot? userDoc;
 
   const _WorkoutsPage({this.userRole, this.userDoc});
 
   @override
+  State<_WorkoutsPage> createState() => _WorkoutsPageState();
+}
+
+class _WorkoutsPageState extends State<_WorkoutsPage> {
+  Set<String> _completedWorkoutIds = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCompletedWorkouts();
+  }
+
+  Future<void> _loadCompletedWorkouts() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      final completedIds = await DatabaseService.getUserCompletedWorkoutIds(currentUser.uid);
+      setState(() {
+        _completedWorkoutIds = completedIds;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final userRole = widget.userRole;
+    final userDoc = widget.userDoc;
+    
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
@@ -1238,19 +1266,54 @@ class _WorkoutsPage extends StatelessWidget {
           return Column(
             children: workouts.map((doc) {
               final data = doc.data() as Map<String, dynamic>;
+              final workoutId = doc.id;
+              final isCompleted = _completedWorkoutIds.contains(workoutId);
+              
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
                 child: ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: Colors.orange,
-                    child: Icon(Icons.fitness_center, color: Colors.white),
+                  leading: CircleAvatar(
+                    backgroundColor: isCompleted ? Colors.green : Colors.orange,
+                    child: Icon(
+                      isCompleted ? Icons.check : Icons.fitness_center,
+                      color: Colors.white,
+                    ),
                   ),
-                  title: Text(
-                    data['workout_name'] ?? 'Bez názvu',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  title: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          data['workout_name'] ?? 'Bez názvu',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            decoration: isCompleted ? TextDecoration.lineThrough : null,
+                            color: isCompleted ? Colors.grey : null,
+                          ),
+                        ),
+                      ),
+                      if (isCompleted)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Text(
+                            'Dokončen',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   subtitle: Text(
                     data['description'] ?? 'Bez popisu',
+                    style: TextStyle(
+                      color: isCompleted ? Colors.grey : null,
+                    ),
                   ),
                   trailing: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -1258,7 +1321,10 @@ class _WorkoutsPage extends StatelessWidget {
                     children: [
                       Text(
                         '${data['estimated_duration'] ?? 0} min',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: isCompleted ? Colors.grey : null,
+                        ),
                       ),
                       Text(
                         '${(data['exercises'] as List?)?.length ?? 0} cviků',
@@ -1269,8 +1335,8 @@ class _WorkoutsPage extends StatelessWidget {
                       ),
                     ],
                   ),
-                  onTap: () {
-                    Navigator.push(
+                  onTap: () async {
+                    final result = await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => WorkoutDetailPage(
@@ -1279,6 +1345,11 @@ class _WorkoutsPage extends StatelessWidget {
                         ),
                       ),
                     );
+                    
+                    // Pokud se trénink dokončil, aktualizuj completion status
+                    if (result == true) {
+                      _loadCompletedWorkouts();
+                    }
                   },
                 ),
               );
@@ -1319,45 +1390,7 @@ class _WorkoutsPage extends StatelessWidget {
   }
 }
 
-/// 📈 Progress page - placeholder for both roles
-class _ProgressPage extends StatelessWidget {
-  final String? userRole;
-
-  const _ProgressPage({this.userRole});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        title: const Text('Pokrok'),
-        backgroundColor: Colors.orange,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.trending_up, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
-            Text(
-              'Pokrok',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Tato sekce bude brzy k dispozici',
-              style: TextStyle(color: Colors.grey),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// 👤 Profile page - shared for both roles
+///  Profile page - shared for both roles
 class _ProfilePage extends StatelessWidget {
   final String? userRole;
 
