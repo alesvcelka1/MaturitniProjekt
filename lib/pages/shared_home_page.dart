@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
-import 'trainer_workouts_page.dart';
 import 'trainer_qr_page.dart';
 import 'qr_scan_page.dart';
 import 'workout_detail_page.dart';
 import 'progress_page.dart';
 import 'calendar_page.dart';
+import 'exercises_management_page.dart';
+import '../widgets/exercise_selector_dialog.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
 
@@ -78,7 +79,15 @@ class _SharedHomePageState extends State<SharedHomePage> {
 
   Widget _buildMainScaffold({String? userRole, DocumentSnapshot? userDoc}) {
     final List<Widget> pages = [
-      _DashboardPage(userRole: userRole, userDoc: userDoc),
+      _DashboardPage(
+        userRole: userRole, 
+        userDoc: userDoc,
+        onNavigateToWorkouts: () {
+          setState(() {
+            _selectedIndex = 1;
+          });
+        },
+      ),
       _WorkoutsPage(userRole: userRole, userDoc: userDoc),
       CalendarPage(userRole: userRole),
       ProgressPage(userRole: userRole),
@@ -157,8 +166,9 @@ class _SharedHomePageState extends State<SharedHomePage> {
 class _DashboardPage extends StatelessWidget {
   final String? userRole;
   final DocumentSnapshot? userDoc;
+  final VoidCallback? onNavigateToWorkouts;
 
-  const _DashboardPage({this.userRole, this.userDoc});
+  const _DashboardPage({this.userRole, this.userDoc, this.onNavigateToWorkouts});
 
   @override
   Widget build(BuildContext context) {
@@ -298,10 +308,22 @@ class _DashboardPage extends StatelessWidget {
         title: 'Správa tréninků',
         subtitle: 'Vytvoř a přiřaď tréninky svým klientům',
         icon: Icons.fitness_center,
-        color: Colors.purple,
+        color: Colors.orange,
+        onTap: () {
+          // Přepni na tab Tréninky
+          onNavigateToWorkouts?.call();
+        },
+      ),
+      const SizedBox(height: 16),
+      _buildActionCard(
+        context,
+        title: 'Databáze cviků',
+        subtitle: 'Spravuj databázi cviků pro tréninky',
+        icon: Icons.library_books,
+        color: Colors.orange,
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const TrainerWorkoutsPage()),
+          MaterialPageRoute(builder: (context) => const ExercisesManagementPage()),
         ),
       ),
       const SizedBox(height: 16),
@@ -1077,48 +1099,857 @@ class _WorkoutsPageState extends State<_WorkoutsPage> {
   }
 
   List<Widget> _buildTrainerWorkouts(BuildContext context) {
-    return [
-      Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Colors.purple, Colors.deepPurple],
+    final currentUser = FirebaseAuth.instance.currentUser;
+    
+    if (currentUser == null) {
+      return [
+        Container(
+          padding: const EdgeInsets.all(20),
+          child: const Text(
+            'Chyba: Nejste přihlášeni',
+            style: TextStyle(color: Colors.red),
           ),
-          borderRadius: BorderRadius.circular(16),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Správa tréninků',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+      ];
+    }
+    
+    return [
+      // Header with Create button
+      Row(
+        children: [
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Colors.orange, Colors.deepOrange],
+                ),
+                borderRadius: BorderRadius.circular(16),
               ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Moje tréninky',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Spravuj tréninky pro své klienty',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 16),
+      
+      // Create workout button
+      SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: () => _showCreateWorkoutBottomSheet(context),
+          icon: const Icon(Icons.add),
+          label: const Text('Vytvořit nový trénink'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.orange,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+      ),
+      const SizedBox(height: 16),
+      
+      // Workouts list
+      Expanded(
+        child: StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('workouts')
+              .where('trainer_id', isEqualTo: currentUser.uid)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(),
+              );
+            }
+
+            if (snapshot.hasError) {
+              return Container(
+                padding: const EdgeInsets.all(20),
+                child: Text(
+                  'Chyba při načítání: ${snapshot.error}',
+                  style: const TextStyle(color: Colors.red),
+                ),
+              );
+            }
+
+            final workouts = snapshot.data?.docs ?? [];
+
+            if (workouts.isEmpty) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.fitness_center_outlined, size: 64, color: Colors.grey[400]),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Zatím nemáš žádné tréninky',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Vytvoř první trénink pomocí tlačítka výše',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return ListView.builder(
+              itemCount: workouts.length,
+              itemBuilder: (context, index) {
+                final doc = workouts[index];
+                final data = doc.data() as Map<String, dynamic>;
+                final workoutName = data['workout_name'] ?? 'Bez názvu';
+                final description = data['description'] ?? '';
+                final clientIds = List<String>.from(data['client_ids'] ?? []);
+                final exercises = List<Map<String, dynamic>>.from(data['exercises'] ?? []);
+
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: InkWell(
+                    onTap: () {
+                      _showWorkoutDetailDialog(context, doc.id, data);
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: Colors.orange,
+                                child: const Icon(
+                                  Icons.fitness_center,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      workoutName,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    if (description.isNotEmpty)
+                                      Text(
+                                        description,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Icon(Icons.people, size: 14, color: Colors.grey[600]),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${clientIds.length} klientů',
+                                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                              ),
+                              const SizedBox(width: 12),
+                              Icon(Icons.list, size: 14, color: Colors.grey[600]),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${exercises.length} cviků',
+                                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                              ),
+                              const Spacer(),
+                              IconButton(
+                                icon: const Icon(Icons.edit, color: Colors.blue, size: 20),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                onPressed: () {
+                                  _showEditWorkoutBottomSheet(context, doc.id, data);
+                                },
+                                tooltip: 'Upravit',
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                onPressed: () => _deleteWorkout(context, doc.id, workoutName),
+                                tooltip: 'Smazat',
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ),
+    ];
+  }
+
+  Future<void> _deleteWorkout(BuildContext context, String workoutId, String workoutName) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Smazat trénink?'),
+        content: Text('Opravdu chceš smazat trénink "$workoutName"?\n\nTato akce je nevratná.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Zrušit'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Smazat'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('workouts')
+            .doc(workoutId)
+            .delete();
+        
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ Trénink smazán'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('❌ Chyba: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  void _showCreateWorkoutBottomSheet(BuildContext context) {
+    _showWorkoutBottomSheet(context);
+  }
+
+  void _showEditWorkoutBottomSheet(BuildContext context, String workoutId, Map<String, dynamic> data) {
+    _showWorkoutBottomSheet(context, workoutId: workoutId, initialData: data);
+  }
+
+  void _showWorkoutBottomSheet(BuildContext context, {String? workoutId, Map<String, dynamic>? initialData}) {
+    final workoutNameController = TextEditingController(text: initialData?['workout_name'] ?? '');
+    final descriptionController = TextEditingController(text: initialData?['description'] ?? '');
+    final durationController = TextEditingController(text: (initialData?['estimated_duration'] ?? 30).toString());
+    
+    List<String> selectedClientIds = List<String>.from(initialData?['client_ids'] ?? []);
+    List<Map<String, dynamic>> exercises = List<Map<String, dynamic>>.from(initialData?['exercises'] ?? []);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Header
+                  Text(
+                    workoutId == null ? 'Nový trénink' : 'Upravit trénink',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Název tréninku
+                  TextField(
+                    controller: workoutNameController,
+                    decoration: InputDecoration(
+                      labelText: 'Název tréninku',
+                      hintText: 'např. Silový trénink horní partie...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Popis
+                  TextField(
+                    controller: descriptionController,
+                    decoration: InputDecoration(
+                      labelText: 'Popis tréninku',
+                      hintText: 'Krátký popis tréninku...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Odhadovaná doba
+                  TextField(
+                    controller: durationController,
+                    decoration: InputDecoration(
+                      labelText: 'Odhadovaná doba (minuty)',
+                      hintText: '30',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Cviky
+                  Row(
+                    children: [
+                      const Text(
+                        'Cviky:',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Spacer(),
+                      TextButton.icon(
+                        onPressed: () {
+                          setSheetState(() {
+                            exercises.add({
+                              'name': '',
+                              'sets': 3,
+                              'reps': 10,
+                              'load': '',
+                            });
+                          });
+                        },
+                        icon: const Icon(Icons.add),
+                        label: const Text('Přidat cvik'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Seznam cviků
+                  ...exercises.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final exercise = entry.value;
+                    return _buildExerciseEditor(
+                      context,
+                      exercise,
+                      index,
+                      (updatedExercise) {
+                        setSheetState(() {
+                          exercises[index] = updatedExercise;
+                        });
+                      },
+                      () {
+                        setSheetState(() {
+                          exercises.removeAt(index);
+                        });
+                      },
+                      setSheetState,
+                    );
+                  }).toList(),
+
+                  const SizedBox(height: 16),
+
+                  // Výběr klientů
+                  _buildClientSelector(context, selectedClientIds, setSheetState),
+                  const SizedBox(height: 24),
+
+                  // Akční tlačítka
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Zrušit'),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => _saveWorkout(
+                            context,
+                            workoutId,
+                            workoutNameController.text.trim(),
+                            descriptionController.text.trim(),
+                            exercises,
+                            int.tryParse(durationController.text) ?? 30,
+                            selectedClientIds,
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: Text(workoutId == null ? 'Vytvořit' : 'Uložit'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExerciseEditor(
+    BuildContext context,
+    Map<String, dynamic> exercise,
+    int index,
+    Function(Map<String, dynamic>) onUpdate,
+    VoidCallback onDelete,
+    StateSetter setSheetState,
+  ) {
+    final nameController = TextEditingController(text: exercise['name'] ?? '');
+    
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Cvik ${index + 1}',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () async {
+                    final selectedExercise = await showDialog<Map<String, dynamic>>(
+                      context: context,
+                      builder: (context) => const ExerciseSelectorDialog(),
+                    );
+                    
+                    if (selectedExercise != null) {
+                      setSheetState(() {
+                        exercise['name'] = selectedExercise['name'];
+                        exercise['exercise_id'] = selectedExercise['id'];
+                        exercise['video_url'] = selectedExercise['video_url'];
+                      });
+                      
+                      nameController.text = selectedExercise['name'] ?? '';
+                      onUpdate(exercise);
+                    }
+                  },
+                  icon: const Icon(Icons.search, size: 18),
+                  label: const Text('Vybrat', style: TextStyle(fontSize: 12)),
+                ),
+                IconButton(
+                  onPressed: onDelete,
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  iconSize: 20,
+                ),
+              ],
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Vytvárej a spravuj tréninky pro své klienty',
-              style: TextStyle(color: Colors.white70),
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'Název cviku',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              onChanged: (value) {
+                exercise['name'] = value;
+                onUpdate(exercise);
+              },
             ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const TrainerWorkoutsPage()),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: TextEditingController(text: (exercise['sets'] ?? 3).toString()),
+                    decoration: const InputDecoration(
+                      labelText: 'Série',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    keyboardType: TextInputType.number,
+                    onChanged: (value) {
+                      exercise['sets'] = int.tryParse(value) ?? 3;
+                      onUpdate(exercise);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: TextEditingController(text: (exercise['reps'] ?? 10).toString()),
+                    decoration: const InputDecoration(
+                      labelText: 'Opakování',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    keyboardType: TextInputType.number,
+                    onChanged: (value) {
+                      exercise['reps'] = int.tryParse(value) ?? 10;
+                      onUpdate(exercise);
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: TextEditingController(text: exercise['load'] ?? ''),
+              decoration: const InputDecoration(
+                labelText: 'Zátěž (% z PR nebo váha)',
+                border: OutlineInputBorder(),
+                isDense: true,
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.purple,
-              ),
-              child: const Text('Otevřít správu tréninků'),
+              onChanged: (value) {
+                exercise['load'] = value;
+                onUpdate(exercise);
+              },
             ),
           ],
         ),
       ),
-    ];
+    );
+  }
+
+  Widget _buildClientSelector(BuildContext context, List<String> selectedClientIds, StateSetter setSheetState) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Přidělit klientům:',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('users')
+              .where('trainer_id', isEqualTo: currentUser!.uid)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const CircularProgressIndicator();
+            }
+
+            final clients = snapshot.data!.docs;
+            
+            if (clients.isEmpty) {
+              return Text(
+                'Nemáte žádné klienty',
+                style: TextStyle(color: Colors.grey[600]),
+              );
+            }
+
+            return Wrap(
+              spacing: 8,
+              children: clients.map((client) {
+                final clientData = client.data() as Map<String, dynamic>;
+                final clientId = client.id;
+                final displayName = clientData['display_name'] ?? clientData['email'] ?? 'Neznámý';
+                final isSelected = selectedClientIds.contains(clientId);
+
+                return FilterChip(
+                  label: Text(displayName),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    setSheetState(() {
+                      if (selected) {
+                        selectedClientIds.add(clientId);
+                      } else {
+                        selectedClientIds.remove(clientId);
+                      }
+                    });
+                  },
+                  selectedColor: Colors.orange.withOpacity(0.2),
+                  checkmarkColor: Colors.orange,
+                );
+              }).toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Future<void> _saveWorkout(
+    BuildContext context,
+    String? workoutId,
+    String workoutName,
+    String description,
+    List<Map<String, dynamic>> exercises,
+    int estimatedDuration,
+    List<String> clientIds,
+  ) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    
+    if (workoutName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Zadejte název tréninku'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    if (exercises.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Přidejte alespoň jeden cvik'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    for (int i = 0; i < exercises.length; i++) {
+      if (exercises[i]['name']?.toString().trim().isEmpty ?? true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Zadejte název pro cvik ${i + 1}'), backgroundColor: Colors.red),
+        );
+        return;
+      }
+    }
+
+    try {
+      final workoutData = {
+        'trainer_id': currentUser?.uid,
+        'client_ids': clientIds,
+        'workout_name': workoutName,
+        'description': description,
+        'exercises': exercises,
+        'estimated_duration': estimatedDuration,
+        'created_at': FieldValue.serverTimestamp(),
+      };
+
+      if (workoutId != null) {
+        await FirebaseFirestore.instance.collection('workouts').doc(workoutId).update(workoutData);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('✅ Trénink upraven'), backgroundColor: Colors.green),
+          );
+        }
+      } else {
+        await FirebaseFirestore.instance.collection('workouts').add(workoutData);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('✅ Trénink vytvořen'), backgroundColor: Colors.green),
+          );
+        }
+      }
+
+      if (context.mounted) Navigator.pop(context);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('❌ Chyba: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  void _showWorkoutDetailDialog(BuildContext context, String workoutId, Map<String, dynamic> data) {
+    final workoutName = data['workout_name'] ?? 'Bez názvu';
+    final description = data['description'] ?? '';
+    final estimatedDuration = data['estimated_duration'] ?? 0;
+    final exercises = List<Map<String, dynamic>>.from(data['exercises'] ?? []);
+    final clientIds = List<String>.from(data['client_ids'] ?? []);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.fitness_center, color: Colors.orange),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                workoutName,
+                style: const TextStyle(fontSize: 20),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (description.isNotEmpty) ...[
+                Text(
+                  description,
+                  style: TextStyle(color: Colors.grey[700]),
+                ),
+                const SizedBox(height: 16),
+              ],
+              
+              // Stats
+              Row(
+                children: [
+                  Icon(Icons.timer, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 4),
+                  Text('$estimatedDuration min'),
+                  const SizedBox(width: 16),
+                  Icon(Icons.people, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 4),
+                  Text('${clientIds.length} klientů'),
+                ],
+              ),
+              const SizedBox(height: 16),
+              
+              // Exercises
+              const Text(
+                'Cviky:',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ...exercises.asMap().entries.map((entry) {
+                final index = entry.key;
+                final exercise = entry.value;
+                final name = exercise['name'] ?? 'Bez názvu';
+                final sets = exercise['sets'] ?? 0;
+                final reps = exercise['reps'] ?? 0;
+                final load = exercise['load'] ?? '';
+                
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: Colors.orange,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${index + 1}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            Text(
+                              '${sets}x${reps}${load.isNotEmpty ? " • $load" : ""}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Zavřít'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              _showEditWorkoutBottomSheet(context, workoutId, data);
+            },
+            icon: const Icon(Icons.edit),
+            label: const Text('Upravit'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   List<Widget> _buildClientWorkouts(BuildContext context, DocumentSnapshot? userDoc) {

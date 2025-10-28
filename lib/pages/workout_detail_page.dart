@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/database_service.dart';
 
 /// Detailed view of a workout for clients
@@ -203,6 +204,7 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
     final reps = exercise['reps'] ?? 0;
     final load = exercise['load'] ?? '';
     final note = exercise['note'] ?? '';
+    final videoUrl = exercise['video_url'] as String?;
     
     // Vypočítej přepočítanou váhu pokud je load v procentech
     String displayLoad = load;
@@ -313,10 +315,58 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                 ),
               ),
             ],
+            // Video button
+            if (videoUrl != null && videoUrl.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _openVideo(videoUrl),
+                  icon: const Icon(Icons.play_circle_filled),
+                  label: const Text('Přehrát video'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _openVideo(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+        );
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Nepodařilo se otevřít video'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Chyba: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Widget _buildDetailChip({
