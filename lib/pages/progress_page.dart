@@ -21,11 +21,20 @@ class _ProgressPageState extends State<ProgressPage> {
   Map<String, dynamic>? _workoutStats;
   bool _isLoadingStats = true;
 
+  // Trainer statistics
+  Map<String, dynamic>? _trainerStats;
+  List<Map<String, dynamic>> _topClients = [];
+  bool _isLoadingTrainerStats = true;
+
   @override
   void initState() {
     super.initState();
-    _loadWorkoutStats();
-    _loadPersonalRecords();
+    if (widget.userRole == 'client') {
+      _loadWorkoutStats();
+      _loadPersonalRecords();
+    } else if (widget.userRole == 'trainer') {
+      _loadTrainerStats();
+    }
   }
 
   Future<void> _loadPersonalRecords() async {
@@ -72,6 +81,31 @@ class _ProgressPageState extends State<ProgressPage> {
     }
   }
 
+  Future<void> _loadTrainerStats() async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        final stats = await DatabaseService.getTrainerStats(currentUser.uid);
+        final topClients = await DatabaseService.getTrainerTopClients(currentUser.uid, limit: 5);
+        
+        setState(() {
+          _trainerStats = stats;
+          _topClients = topClients;
+          _isLoadingTrainerStats = false;
+        });
+      } else {
+        setState(() {
+          _isLoadingTrainerStats = false;
+        });
+      }
+    } catch (e) {
+      print('Chyba při načítání statistik trenéra: $e');
+      setState(() {
+        _isLoadingTrainerStats = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -83,7 +117,14 @@ class _ProgressPageState extends State<ProgressPage> {
         elevation: 0,
         actions: [
           IconButton(
-            onPressed: _loadWorkoutStats,
+            onPressed: () {
+              if (widget.userRole == 'client') {
+                _loadWorkoutStats();
+                _loadPersonalRecords();
+              } else if (widget.userRole == 'trainer') {
+                _loadTrainerStats();
+              }
+            },
             icon: const Icon(Icons.refresh),
             tooltip: 'Obnovit statistiky',
           ),
@@ -597,12 +638,34 @@ class _ProgressPageState extends State<ProgressPage> {
   }
 
   Widget _buildTrainerStatsSection() {
+    if (_isLoadingTrainerStats) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(40),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Colors.orange, Colors.deepOrange],
+          ),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
+      );
+    }
+
+    final stats = _trainerStats ?? {
+      'client_count': 0,
+      'workout_count': 0,
+      'weekly_completed': 0,
+    };
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Colors.indigo, Colors.blue],
+          colors: [Colors.orange, Colors.deepOrange],
         ),
         borderRadius: BorderRadius.circular(16),
       ),
@@ -632,25 +695,52 @@ class _ProgressPageState extends State<ProgressPage> {
           Row(
             children: [
               Expanded(
-                child: _buildTrainerStatCard('Aktivní klienti', '8', Icons.people),
+                child: _buildTrainerStatCard(
+                  'Aktivní klienti', 
+                  '${stats['client_count']}', 
+                  Icons.people
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _buildTrainerStatCard('Tréninky vytvořené', '24', Icons.fitness_center),
+                child: _buildTrainerStatCard(
+                  'Tréninky vytvořené', 
+                  '${stats['workout_count']}', 
+                  Icons.fitness_center
+                ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildTrainerStatCard('Tento týden', '156 tréninků', Icons.calendar_today),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildTrainerStatCard('Úspěšnost', '87%', Icons.trending_up),
-              ),
-            ],
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                const Icon(Icons.calendar_today, color: Colors.white, size: 24),
+                const SizedBox(height: 8),
+                Text(
+                  '${stats['weekly_completed']} tréninků',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Text(
+                  'TENTO TÝDEN',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 11,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -690,6 +780,66 @@ class _ProgressPageState extends State<ProgressPage> {
   }
 
   Widget _buildClientOverviewSection() {
+    if (_isLoadingTrainerStats) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(40),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(color: Colors.orange),
+        ),
+      );
+    }
+
+    if (_topClients.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(40),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.people_outline, size: 64, color: Colors.grey[300]),
+            const SizedBox(height: 16),
+            Text(
+              'Zatím nemáš žádné klienty',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Přidej klienty a sleduj jejich pokrok',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[400],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -709,7 +859,7 @@ class _ProgressPageState extends State<ProgressPage> {
         children: [
           const Row(
             children: [
-              Icon(Icons.group, color: Colors.indigo, size: 28),
+              Icon(Icons.group, color: Colors.orange, size: 28),
               SizedBox(width: 12),
               Text(
                 'Nejaktivnější klienti',
@@ -721,10 +871,40 @@ class _ProgressPageState extends State<ProgressPage> {
             ],
           ),
           const SizedBox(height: 16),
-          _buildClientRankingItem('Jan Novák', '12 tréninků', '🥇', Colors.orange),
-          _buildClientRankingItem('Anna Svobodová', '10 tréninků', '🥈', Colors.grey),
-          _buildClientRankingItem('Petr Dvořák', '8 tréninků', '🥉', Colors.brown),
-          _buildClientRankingItem('Marie Nová', '6 tréninků', '4', Colors.blue),
+          ..._topClients.asMap().entries.map((entry) {
+            final index = entry.key;
+            final client = entry.value;
+            final name = client['name'] as String;
+            final count = client['completed_count'] as int;
+            
+            String position;
+            Color color;
+            
+            switch (index) {
+              case 0:
+                position = '🥇';
+                color = Colors.orange;
+                break;
+              case 1:
+                position = '🥈';
+                color = Colors.grey;
+                break;
+              case 2:
+                position = '🥉';
+                color = Colors.brown;
+                break;
+              default:
+                position = '${index + 1}';
+                color = Colors.blue;
+            }
+            
+            return _buildClientRankingItem(
+              name, 
+              '$count tréninků', 
+              position, 
+              color
+            );
+          }).toList(),
         ],
       ),
     );

@@ -788,5 +788,95 @@ class DatabaseService {
       rethrow;
     }
   }
-}
 
+  /// Získá statistiky trenéra
+  static Future<Map<String, dynamic>> getTrainerStats(String trainerId) async {
+    try {
+      // Počet klientů
+      final clientsSnapshot = await users
+          .where('role', isEqualTo: 'client')
+          .where('trainer_id', isEqualTo: trainerId)
+          .get();
+      final clientCount = clientsSnapshot.docs.length;
+
+      // Počet vytvořených tréninků
+      final workoutsSnapshot = await workouts
+          .where('trainer_id', isEqualTo: trainerId)
+          .get();
+      final workoutCount = workoutsSnapshot.docs.length;
+
+      // Počet dokončených tréninků klientů tento týden
+      final now = DateTime.now();
+      final weekStart = now.subtract(Duration(days: now.weekday - 1));
+      final weekStartStr = weekStart.toIso8601String().split('T')[0];
+      
+      final completedThisWeek = await completedWorkouts
+          .where('date', isGreaterThanOrEqualTo: weekStartStr)
+          .get();
+      
+      // Filtrovat pouze tréninky klientů tohoto trenéra
+      final clientIds = clientsSnapshot.docs.map((doc) => doc.id).toList();
+      final weeklyCompletedCount = completedThisWeek.docs.where((doc) {
+        final userId = doc.data() as Map<String, dynamic>;
+        return clientIds.contains(userId['user_id']);
+      }).length;
+
+      return {
+        'client_count': clientCount,
+        'workout_count': workoutCount,
+        'weekly_completed': weeklyCompletedCount,
+        'clients': clientsSnapshot.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          data['id'] = doc.id;
+          return data;
+        }).toList(),
+      };
+    } catch (e) {
+      print('❌ Chyba při načítání statistik trenéra: $e');
+      return {
+        'client_count': 0,
+        'workout_count': 0,
+        'weekly_completed': 0,
+        'clients': [],
+      };
+    }
+  }
+
+  /// Získá nejaktivnější klienty trenéra
+  static Future<List<Map<String, dynamic>>> getTrainerTopClients(String trainerId, {int limit = 5}) async {
+    try {
+      // Získat klienty trenéra
+      final clientsSnapshot = await users
+          .where('role', isEqualTo: 'client')
+          .where('trainer_id', isEqualTo: trainerId)
+          .get();
+
+      final clientStats = <Map<String, dynamic>>[];
+
+      for (final clientDoc in clientsSnapshot.docs) {
+        final clientData = clientDoc.data() as Map<String, dynamic>;
+        
+        // Spočítat dokončené tréninky pro každého klienta
+        final completedSnapshot = await completedWorkouts
+            .where('user_id', isEqualTo: clientDoc.id)
+            .get();
+        
+        clientStats.add({
+          'id': clientDoc.id,
+          'name': clientData['display_name'] ?? 'Bez jména',
+          'email': clientData['email'] ?? '',
+          'completed_count': completedSnapshot.docs.length,
+          'photo_url': clientData['photo_url'],
+        });
+      }
+
+      // Seřadit podle počtu dokončených tréninků
+      clientStats.sort((a, b) => (b['completed_count'] as int).compareTo(a['completed_count'] as int));
+
+      return clientStats.take(limit).toList();
+    } catch (e) {
+      print('❌ Chyba při načítání top klientů: $e');
+      return [];
+    }
+  }
+}
