@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
 import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
 import 'trainer_qr_page.dart';
 import 'qr_scan_page.dart';
 import 'workout_detail_page.dart';
@@ -173,7 +176,15 @@ class _DashboardPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    final userName = user?.displayName ?? user?.email?.split('@')[0] ?? 'Uživatel';
+    
+    // Get display name from userDoc if available, otherwise from Firebase Auth
+    String userName = 'Uživatel';
+    if (userDoc != null && userDoc!.exists) {
+      final data = userDoc!.data() as Map<String, dynamic>?;
+      userName = data?['display_name'] as String? ?? user?.displayName ?? user?.email?.split('@')[0] ?? 'Uživatel';
+    } else {
+      userName = user?.displayName ?? user?.email?.split('@')[0] ?? 'Uživatel';
+    }
 
     return CustomScrollView(
       slivers: [
@@ -260,19 +271,38 @@ class _DashboardPage extends StatelessWidget {
                               ],
                             ),
                           ),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Icon(
-                              userRole == 'trainer' 
-                                  ? Icons.fitness_center 
-                                  : Icons.local_fire_department,
-                              color: Colors.white,
-                              size: 28,
-                            ),
+                          // Profilová fotka nebo ikona
+                          Builder(
+                            builder: (context) {
+                              final photoUrl = userDoc?.exists == true 
+                                  ? (userDoc!.data() as Map<String, dynamic>?)?.containsKey('photo_url') == true
+                                      ? (userDoc!.data() as Map<String, dynamic>)['photo_url'] as String?
+                                      : null
+                                  : null;
+                              
+                              if (photoUrl != null && photoUrl.startsWith('data:image')) {
+                                return CircleAvatar(
+                                  radius: 28,
+                                  backgroundColor: Colors.white.withOpacity(0.2),
+                                  backgroundImage: MemoryImage(base64Decode(photoUrl.split(',')[1])),
+                                );
+                              }
+                              
+                              return Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Icon(
+                                  userRole == 'trainer' 
+                                      ? Icons.fitness_center 
+                                      : Icons.local_fire_department,
+                                  color: Colors.white,
+                                  size: 28,
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -2225,10 +2255,190 @@ class _WorkoutsPageState extends State<_WorkoutsPage> {
 }
 
 ///  Profile page - shared for both roles
-class _ProfilePage extends StatelessWidget {
+class _ProfilePage extends StatefulWidget {
   final String? userRole;
 
   const _ProfilePage({this.userRole});
+
+  @override
+  State<_ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<_ProfilePage> {
+  String? _displayName;
+  String? _photoUrl;
+  bool _isLoadingProfile = true;
+  final ImagePicker _picker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final userDoc = await DatabaseService.users.doc(user.uid).get();
+      if (userDoc.exists) {
+        final data = userDoc.data() as Map<String, dynamic>;
+        setState(() {
+          _displayName = data['display_name'] as String?;
+          _photoUrl = data['photo_url'] as String?;
+          _isLoadingProfile = false;
+        });
+      } else {
+        setState(() {
+          _displayName = user.displayName ?? user.email?.split('@')[0];
+          _photoUrl = user.photoURL;
+          _isLoadingProfile = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _changeProfilePhoto() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      // Výběr zdroje fotky
+      final source = await showDialog<ImageSource>(
+        context: context,
+        builder: (BuildContext dialogContext) {
+          return AlertDialog(
+            title: const Text('Vyberte zdroj fotky'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.camera_alt, color: Colors.orange),
+                  title: const Text('Fotoaparát'),
+                  onTap: () => Navigator.of(dialogContext).pop(ImageSource.camera),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_library, color: Colors.orange),
+                  title: const Text('Galerie'),
+                  onTap: () => Navigator.of(dialogContext).pop(ImageSource.gallery),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+
+      if (source == null) return;
+
+      // Vybrat obrázek
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        maxWidth: 500,
+        maxHeight: 500,
+        imageQuality: 85,
+      );
+
+      if (image == null) return;
+
+      // Načíst bytes
+      final Uint8List imageBytes = await image.readAsBytes();
+      
+      // Převést na base64 string pro uložení do Firestore
+      final String base64Image = base64Encode(imageBytes);
+      
+      // Uložit do Firestore
+      await DatabaseService.users.doc(user.uid).update({
+        'photo_url': 'data:image/jpeg;base64,$base64Image',
+      });
+
+      setState(() {
+        _photoUrl = 'data:image/jpeg;base64,$base64Image';
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profilová fotka aktualizována!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Chyba při nahrávání fotky: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _showEditNicknameDialog() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final controller = TextEditingController(text: _displayName ?? '');
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Změnit přezdívku'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              labelText: 'Přezdívka',
+              border: OutlineInputBorder(),
+              hintText: 'Zadej svou přezdívku',
+            ),
+            textCapitalization: TextCapitalization.words,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Zrušit'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final newName = controller.text.trim();
+                if (newName.isNotEmpty) {
+                  Navigator.of(dialogContext).pop(newName);
+                }
+              },
+              child: const Text('Uložit'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result != null && result.isNotEmpty) {
+      try {
+        await DatabaseService.users.doc(user.uid).update({
+          'display_name': result,
+        });
+
+        setState(() {
+          _displayName = result;
+        });
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Přezdívka aktualizována!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Chyba při ukládání: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2243,119 +2453,152 @@ class _ProfilePage extends StatelessWidget {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
+      body: _isLoadingProfile
+          ? const Center(child: CircularProgressIndicator(color: Colors.orange))
+          : Padding(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
               child: Column(
                 children: [
-                  CircleAvatar(
-                    radius: 40,
-                    backgroundColor: Colors.orange.withOpacity(0.1),
-                    child: Icon(
-                      userRole == 'trainer' ? Icons.fitness_center : Icons.person,
-                      size: 40,
-                      color: Colors.orange,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    user?.displayName ?? user?.email?.split('@')[0] ?? 'Uživatel',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    user?.email ?? '',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                  if (userRole != null) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        userRole == 'trainer' ? 'Trenér' : 'Klient',
-                        style: const TextStyle(
-                          color: Colors.orange,
-                          fontWeight: FontWeight.bold,
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
+                    child: Column(
+                      children: [
+                        Stack(
+                          children: [
+                            CircleAvatar(
+                              radius: 50,
+                              backgroundColor: Colors.orange.withOpacity(0.1),
+                              backgroundImage: _photoUrl != null && _photoUrl!.startsWith('data:image')
+                                  ? MemoryImage(base64Decode(_photoUrl!.split(',')[1]))
+                                  : null,
+                              child: _photoUrl == null || !_photoUrl!.startsWith('data:image')
+                                  ? Icon(
+                                      widget.userRole == 'trainer' ? Icons.fitness_center : Icons.person,
+                                      size: 40,
+                                      color: Colors.orange,
+                                    )
+                                  : null,
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: GestureDetector(
+                                onTap: _changeProfilePhoto,
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.2),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.camera_alt,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          _displayName ?? user?.email?.split('@')[0] ?? 'Uživatel',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          user?.email ?? '',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                        if (widget.userRole != null) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              widget.userRole == 'trainer' ? 'Trenér' : 'Klient',
+                              style: const TextStyle(
+                                color: Colors.orange,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.photo_camera, color: Colors.orange),
+                          title: const Text('Změnit profilovou fotku'),
+                          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                          onTap: _changeProfilePhoto,
+                        ),
+                        const Divider(),
+                        ListTile(
+                          leading: const Icon(Icons.edit, color: Colors.orange),
+                          title: const Text('Změnit přezdívku'),
+                          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                          onTap: _showEditNicknameDialog,
+                        ),
+                        const Divider(),
+                        ListTile(
+                          leading: const Icon(Icons.logout, color: Colors.red),
+                          title: const Text('Odhlásit se', style: TextStyle(color: Colors.red)),
+                          onTap: () async {
+                            await authService.signOut();
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.settings, color: Colors.grey),
-                    title: const Text('Nastavení'),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () {
-                      // Navigate to settings
-                    },
-                  ),
-                  const Divider(),
-                  ListTile(
-                    leading: const Icon(Icons.help, color: Colors.grey),
-                    title: const Text('Nápověda'),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () {
-                      // Navigate to help
-                    },
-                  ),
-                  const Divider(),
-                  ListTile(
-                    leading: const Icon(Icons.logout, color: Colors.red),
-                    title: const Text('Odhlásit se', style: TextStyle(color: Colors.red)),
-                    onTap: () async {
-                      await authService.signOut();
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
