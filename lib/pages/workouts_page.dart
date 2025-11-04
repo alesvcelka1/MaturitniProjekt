@@ -982,7 +982,7 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Colors.blue, Colors.indigo],
+            colors: [Color(0xFFFF6B35), Color(0xFFFF8A50)],
           ),
           borderRadius: BorderRadius.circular(16),
         ),
@@ -1082,10 +1082,8 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
                       Expanded(
                         child: Text(
                           data['workout_name'] ?? 'Bez názvu',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontWeight: FontWeight.bold,
-                            decoration: isCompleted ? TextDecoration.lineThrough : null,
-                            color: isCompleted ? Colors.grey : null,
                           ),
                         ),
                       ),
@@ -1109,9 +1107,6 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
                   ),
                   subtitle: Text(
                     data['description'] ?? 'Bez popisu',
-                    style: TextStyle(
-                      color: isCompleted ? Colors.grey : null,
-                    ),
                   ),
                   trailing: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -1119,9 +1114,8 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
                     children: [
                       Text(
                         '${data['estimated_duration'] ?? 0} min',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: isCompleted ? Colors.grey : null,
                         ),
                       ),
                       Text(

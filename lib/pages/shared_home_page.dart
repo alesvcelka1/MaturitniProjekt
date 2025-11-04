@@ -80,7 +80,7 @@ class _SharedHomePageState extends State<SharedHomePage> {
   }
 
   Widget _buildMainScaffold({String? userRole, DocumentSnapshot? userDoc}) {
-    final List<Widget> pages = [
+        final List<Widget> pages = [
       _DashboardPage(
         userRole: userRole, 
         userDoc: userDoc,
@@ -580,6 +580,7 @@ class _DashboardPage extends StatelessWidget {
   List<Widget> _buildClientDashboard(BuildContext context, DocumentSnapshot? userDoc) {
     final userData = userDoc?.data() as Map<String, dynamic>?;
     final trainerId = userData?['trainer_id'] as String?;
+    final currentUser = FirebaseAuth.instance.currentUser;
 
     return [
       if (trainerId == null) ...[
@@ -596,23 +597,194 @@ class _DashboardPage extends StatelessWidget {
           ),
         ),
       ] else ...[
-        // Connected to trainer
-        _buildActionCard(
-          context,
-          title: 'Moje tréninky',
-          subtitle: 'Zobraz tréninky přidělené trenérem',
-          icon: Icons.fitness_center,
-          color: Colors.blue,
-          onTap: () {
-            // Navigate to client workouts view
-          },
-        ),
-        const SizedBox(height: 16),
-        _buildStatsCard('Dokončené tréninky', '0', Icons.check_circle),
+        // Today's scheduled workouts
+        _buildTodayWorkouts(context, currentUser?.uid ?? ''),
       ],
-      const SizedBox(height: 16),
-      _buildStatsCard('Aktivní dny', '0', Icons.calendar_today),
     ];
+  }
+
+  Widget _buildTodayWorkouts(BuildContext context, String userId) {
+    final today = DateTime.now();
+    
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.today, color: Colors.blue, size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Dnešní plán',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('scheduled_workouts')
+                .where('user_id', isEqualTo: userId)
+                .where('scheduled_date', 
+                    isGreaterThanOrEqualTo: Timestamp.fromDate(DateTime(today.year, today.month, today.day)))
+                .where('scheduled_date',
+                    isLessThan: Timestamp.fromDate(DateTime(today.year, today.month, today.day + 1)))
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+
+              final workouts = snapshot.data?.docs ?? [];
+              
+              if (workouts.isEmpty) {
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.beach_access, color: Colors.grey[400], size: 32),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Žádné tréninky',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                            Text(
+                              'Dnes máš volno!',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return Column(
+                children: workouts.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final status = data['status'] as String? ?? 'scheduled';
+                  final workoutName = data['workout_name'] as String? ?? 'Trénink';
+                  
+                  Color statusColor;
+                  IconData statusIcon;
+                  String statusText;
+                  
+                  switch (status) {
+                    case 'completed':
+                      statusColor = Colors.green;
+                      statusIcon = Icons.check_circle;
+                      statusText = 'Dokončeno';
+                      break;
+                    case 'cancelled':
+                      statusColor = Colors.red;
+                      statusIcon = Icons.cancel;
+                      statusText = 'Zrušeno';
+                      break;
+                    default:
+                      statusColor = Colors.orange;
+                      statusIcon = Icons.schedule;
+                      statusText = 'Naplánováno';
+                  }
+                  
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: statusColor.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: statusColor.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(statusIcon, color: statusColor, size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                workoutName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              Text(
+                                statusText,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: statusColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (status == 'scheduled')
+                          Icon(Icons.arrow_forward_ios, 
+                            size: 16, 
+                            color: Colors.grey[400],
+                          ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              );
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   List<Widget> _buildNewUserDashboard(BuildContext context) {
@@ -806,58 +978,6 @@ class _DashboardPage extends StatelessWidget {
             Icon(Icons.arrow_forward_ios, color: Colors.grey[400], size: 16),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildStatsCard(String title, String value, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: Colors.orange, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

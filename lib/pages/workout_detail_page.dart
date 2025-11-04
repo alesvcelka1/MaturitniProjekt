@@ -21,11 +21,29 @@ class WorkoutDetailPage extends StatefulWidget {
 class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
   Map<String, Map<String, dynamic>> _userPRs = {};
   bool _isLoadingPRs = true;
+  bool _isCompleted = false;
+  bool _isCheckingCompletion = true;
   
   @override
   void initState() {
     super.initState();
     _loadUserPRs();
+    _checkIfCompleted();
+  }
+  
+  Future<void> _checkIfCompleted() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      final completed = await DatabaseService.isWorkoutCompleted(currentUser.uid, widget.workoutId);
+      setState(() {
+        _isCompleted = completed;
+        _isCheckingCompletion = false;
+      });
+    } else {
+      setState(() {
+        _isCheckingCompletion = false;
+      });
+    }
   }
   
   Future<void> _loadUserPRs() async {
@@ -58,11 +76,12 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
-          IconButton(
-            onPressed: () => _completeWorkout(context),
-            icon: const Icon(Icons.check_circle),
-            tooltip: 'Trénink dokončen',
-          ),
+          if (!_isCompleted && !_isCheckingCompletion)
+            IconButton(
+              onPressed: () => _completeWorkout(context),
+              icon: const Icon(Icons.check_circle),
+              tooltip: 'Trénink dokončen',
+            ),
         ],
       ),
       body: SingleChildScrollView(
@@ -145,32 +164,80 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
           ],
         ),
       ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
+      bottomNavigationBar: _isCompleted 
+        ? Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, -5),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: ElevatedButton.icon(
-          onPressed: () => _completeWorkout(context),
-          icon: const Icon(Icons.check_circle),
-          label: const Text('Trénink dokončen'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.green, width: 2),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      color: Colors.green,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Trénink dokončen',
+                    style: TextStyle(
+                      color: Colors.green,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        : Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, -5),
+                ),
+              ],
+            ),
+            child: ElevatedButton.icon(
+              onPressed: () => _completeWorkout(context),
+              icon: const Icon(Icons.check_circle),
+              label: const Text('Trénink dokončen'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
             ),
           ),
-        ),
-      ),
     );
   }
 
@@ -423,19 +490,116 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) => AlertDialog(
-            title: const Text('🎉 Trénink dokončen!'),
-            content: const Text('Trénink byl úspěšně označen jako dokončený.'),
-            actions: [
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop(); // Close dialog
-                  Navigator.of(context).pop(true); // Go back to workout list with completion signal
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                child: const Text('Hotovo'),
+          builder: (context) => Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF4CAF50),
+                    Color(0xFF66BB6A),
+                    Color(0xFF81C784),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(20),
               ),
-            ],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Animated success icon
+                  Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.3),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check_circle,
+                      size: 80,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    '🎉 Skvělá práce!',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Trénink byl úspěšně dokončen',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.white,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${exercises.length} cviků splněno',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).pop(); // Close dialog
+                            Navigator.of(context).pop(true); // Go back to workout list
+                          },
+                          icon: const Icon(Icons.home),
+                          label: const Text(
+                            'Zpět',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF4CAF50),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 16,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
         );
       }

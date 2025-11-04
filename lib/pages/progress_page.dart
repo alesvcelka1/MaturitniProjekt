@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../services/database_service.dart';
 
 /// Progress page showing Personal Records and simple statistics
@@ -373,38 +375,199 @@ class _ProgressPageState extends State<ProgressPage> {
             ],
           ),
           const SizedBox(height: 20),
-          // Simple chart placeholder
-          Container(
-            height: 120,
-            width: double.infinity,
+          // Weekly activity chart
+          _buildWeeklyActivityChart(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWeeklyActivityChart() {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      return const SizedBox.shrink();
+    }
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('completed_workouts')
+          .where('user_id', isEqualTo: currentUser.uid)
+          .where('completed_at',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(
+                  DateTime.now().subtract(const Duration(days: 6))))
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            height: 200,
             decoration: BoxDecoration(
               color: Colors.grey[100],
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.trending_up, size: 40, color: Colors.grey[400]),
-                const SizedBox(height: 8),
-                Text(
-                  'Graf týdenní aktivity',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                Text(
-                  'Bude implementován příště',
-                  style: TextStyle(
-                    color: Colors.grey[400],
-                    fontSize: 12,
-                  ),
-                ),
-              ],
+            child: const Center(
+              child: CircularProgressIndicator(color: Colors.orange),
             ),
+          );
+        }
+
+        // Prepare data for the last 7 days
+        final now = DateTime.now();
+        final weekData = <int, int>{};
+
+        // Initialize all days with 0
+        for (int i = 6; i >= 0; i--) {
+          final day = now.subtract(Duration(days: i));
+          weekData[day.weekday - 1] = 0;
+        }
+
+        // Count workouts per day
+        final workouts = snapshot.data?.docs ?? [];
+        for (var doc in workouts) {
+          final data = doc.data() as Map<String, dynamic>;
+          final completedAt = (data['completed_at'] as Timestamp).toDate();
+          final dayIndex = completedAt.weekday - 1;
+          weekData[dayIndex] = (weekData[dayIndex] ?? 0) + 1;
+        }
+
+        // Find max value for chart scaling
+        final maxY = (weekData.values.isEmpty ? 0 : weekData.values.reduce((a, b) => a > b ? a : b)).toDouble();
+        final chartMaxY = (maxY == 0 ? 5.0 : (maxY + 1.0));
+
+        return Container(
+          height: 200,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(12),
           ),
-        ],
-      ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.bar_chart, color: Colors.orange[700], size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Týdenní aktivita',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: BarChart(
+                  BarChartData(
+                    alignment: BarChartAlignment.spaceAround,
+                    maxY: chartMaxY,
+                    minY: 0,
+                    barTouchData: BarTouchData(
+                      enabled: true,
+                      touchTooltipData: BarTouchTooltipData(
+                        getTooltipColor: (group) => Colors.orange.withOpacity(0.9),
+                        tooltipPadding: const EdgeInsets.all(8),
+                        tooltipMargin: 8,
+                        getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                          final dayNames = ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'];
+                          return BarTooltipItem(
+                            '${dayNames[group.x.toInt()]}\n${rod.toY.toInt()} tréninků',
+                            const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    titlesData: FlTitlesData(
+                      show: true,
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          getTitlesWidget: (value, meta) {
+                            const dayNames = ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'];
+                            if (value.toInt() >= 0 && value.toInt() < dayNames.length) {
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(
+                                  dayNames[value.toInt()],
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              );
+                            }
+                            return const Text('');
+                          },
+                        ),
+                      ),
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 28,
+                          getTitlesWidget: (value, meta) {
+                            if (value == meta.max || value == meta.min) {
+                              return const Text('');
+                            }
+                            return Text(
+                              value.toInt().toString(),
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey[600],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      topTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      rightTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                    ),
+                    gridData: FlGridData(
+                      show: true,
+                      drawVerticalLine: false,
+                      horizontalInterval: 1,
+                      getDrawingHorizontalLine: (value) {
+                        return FlLine(
+                          color: Colors.grey[300],
+                          strokeWidth: 1,
+                        );
+                      },
+                    ),
+                    borderData: FlBorderData(show: false),
+                    barGroups: List.generate(7, (index) {
+                      final value = weekData[index]?.toDouble() ?? 0;
+                      return BarChartGroupData(
+                        x: index,
+                        barRods: [
+                          BarChartRodData(
+                            toY: value == 0 ? 0.1 : value,
+                            color: value == 0 
+                                ? Colors.grey[300] 
+                                : Colors.orange,
+                            width: 20,
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(4),
+                            ),
+                          ),
+                        ],
+                      );
+                    }),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
