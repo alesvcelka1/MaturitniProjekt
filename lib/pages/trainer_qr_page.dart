@@ -132,11 +132,13 @@ class _TrainerQrPageState extends State<TrainerQrPage> {
           ),
         ),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                const SizedBox(height: 20),
+                
                 // Informační text
                 const Text(
                   'Sdílej tento QR kód se svými klienty',
@@ -148,7 +150,7 @@ class _TrainerQrPageState extends State<TrainerQrPage> {
                   textAlign: TextAlign.center,
                 ),
                 
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 
                 const Text(
                   'Klient ho naskenuje a automaticky se s tebou propojí',
@@ -159,7 +161,7 @@ class _TrainerQrPageState extends State<TrainerQrPage> {
                   textAlign: TextAlign.center,
                 ),
                 
-                const SizedBox(height: 40),
+                const SizedBox(height: 32),
                 
                 // 5️⃣ QR kód v bílém kontejneru
                 Container(
@@ -211,7 +213,7 @@ class _TrainerQrPageState extends State<TrainerQrPage> {
                   ),
                 ),
                 
-                const SizedBox(height: 40),
+                const SizedBox(height: 32),
                 
                 // 6️⃣ Pomocný text
                 Container(
@@ -253,6 +255,8 @@ class _TrainerQrPageState extends State<TrainerQrPage> {
                     ],
                   ),
                 ),
+                
+                const SizedBox(height: 20),
               ],
             ),
           ),
