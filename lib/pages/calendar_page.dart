@@ -343,31 +343,36 @@ class _CalendarPageState extends State<CalendarPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              leading: const Icon(Icons.visibility, color: Colors.blue),
-              title: const Text('Zobrazit detail'),
-              onTap: () async {
-                Navigator.pop(context);
-                
-                // Načti workout data
-                final doc = await FirebaseFirestore.instance
-                    .collection('workouts')
-                    .doc(workoutId)
-                    .get();
-                
-                if (doc.exists && mounted) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => WorkoutDetailPage(
-                        workoutId: workoutId,
-                        workoutData: doc.data() as Map<String, dynamic>,
+            // Zobrazit detail pouze pro klienty
+            if (widget.userRole == 'client') ...[
+              ListTile(
+                leading: const Icon(Icons.visibility, color: Colors.blue),
+                title: const Text('Zobrazit detail'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  
+                  // Načti workout data
+                  final doc = await FirebaseFirestore.instance
+                      .collection('workouts')
+                      .doc(workoutId)
+                      .get();
+                  
+                  if (doc.exists && mounted) {
+                    final workoutData = doc.data() as Map<String, dynamic>;
+                    
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => WorkoutDetailPage(
+                          workoutId: workoutId,
+                          workoutData: workoutData,
+                        ),
                       ),
-                    ),
-                  );
-                }
-              },
-            ),
+                    );
+                  }
+                },
+              ),
+            ],
             if (status == 'scheduled' && widget.userRole == 'client') ...[
               ListTile(
                 leading: const Icon(Icons.check_circle, color: Colors.green),

@@ -87,24 +87,32 @@ class _ProgressPageState extends State<ProgressPage> {
     try {
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser != null) {
+        print('🔄 Načítání statistik trenéra pro UID: ${currentUser.uid}');
         final stats = await DatabaseService.getTrainerStats(currentUser.uid);
+        print('📊 Načtené statistiky: $stats');
         final topClients = await DatabaseService.getTrainerTopClients(currentUser.uid, limit: 5);
+        print('🏆 Top klienti: ${topClients.length}');
         
-        setState(() {
-          _trainerStats = stats;
-          _topClients = topClients;
-          _isLoadingTrainerStats = false;
-        });
+        if (mounted) {
+          setState(() {
+            _trainerStats = stats;
+            _topClients = topClients;
+            _isLoadingTrainerStats = false;
+          });
+          print('✅ Statistiky trenéra úspěšně nastaveny');
+        }
       } else {
         setState(() {
           _isLoadingTrainerStats = false;
         });
       }
     } catch (e) {
-      print('Chyba při načítání statistik trenéra: $e');
-      setState(() {
-        _isLoadingTrainerStats = false;
-      });
+      print('❌ Chyba při načítání statistik trenéra: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingTrainerStats = false;
+        });
+      }
     }
   }
 
@@ -118,6 +126,26 @@ class _ProgressPageState extends State<ProgressPage> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
+          if (widget.userRole == 'client')
+            IconButton(
+              onPressed: () async {
+                final currentUser = FirebaseAuth.instance.currentUser;
+                if (currentUser != null) {
+                  await DatabaseService.removeDuplicateCompletedWorkouts(currentUser.uid);
+                  _loadWorkoutStats();
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('✅ Duplicity vyčištěny'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                }
+              },
+              icon: const Icon(Icons.cleaning_services),
+              tooltip: 'Vyčistit duplicity',
+            ),
           IconButton(
             onPressed: () {
               if (widget.userRole == 'client') {
@@ -388,15 +416,28 @@ class _ProgressPageState extends State<ProgressPage> {
       return const SizedBox.shrink();
     }
 
+    final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 6));
+
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('completed_workouts')
           .where('user_id', isEqualTo: currentUser.uid)
-          .where('completed_at',
-              isGreaterThanOrEqualTo: Timestamp.fromDate(
-                  DateTime.now().subtract(const Duration(days: 6))))
           .snapshots(),
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          print('❌ Chyba v grafu týdenní aktivity: ${snapshot.error}');
+          return Container(
+            height: 200,
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Center(
+              child: Text('Chyba: ${snapshot.error}', style: const TextStyle(color: Colors.red, fontSize: 12)),
+            ),
+          );
+        }
+        
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Container(
             height: 200,
@@ -420,13 +461,18 @@ class _ProgressPageState extends State<ProgressPage> {
           weekData[day.weekday - 1] = 0;
         }
 
-        // Count workouts per day
-        final workouts = snapshot.data?.docs ?? [];
-        for (var doc in workouts) {
+        // Filtruj na posledních 7 dní a počítej tréninky podle dnů
+        final allWorkouts = snapshot.data?.docs ?? [];
+        for (var doc in allWorkouts) {
           final data = doc.data() as Map<String, dynamic>;
-          final completedAt = (data['completed_at'] as Timestamp).toDate();
-          final dayIndex = completedAt.weekday - 1;
-          weekData[dayIndex] = (weekData[dayIndex] ?? 0) + 1;
+          final completedAt = (data['completed_at'] as Timestamp?)?.toDate();
+          if (completedAt == null) continue;
+          
+          // Pouze tréninky z posledních 7 dní
+          if (completedAt.isAfter(sevenDaysAgo)) {
+            final dayIndex = completedAt.weekday - 1;
+            weekData[dayIndex] = (weekData[dayIndex] ?? 0) + 1;
+          }
         }
 
         // Find max value for chart scaling

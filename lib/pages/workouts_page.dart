@@ -532,8 +532,6 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
     VoidCallback onDelete,
     StateSetter setSheetState,
   ) {
-    final nameController = TextEditingController(text: exercise['name'] ?? '');
-    
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
@@ -562,7 +560,6 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
                         exercise['video_url'] = selectedExercise['video_url'];
                       });
                       
-                      nameController.text = selectedExercise['name'] ?? '';
                       onUpdate(exercise);
                     }
                   },
@@ -577,8 +574,9 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
               ],
             ),
             const SizedBox(height: 8),
-            TextField(
-              controller: nameController,
+            TextFormField(
+              key: ValueKey('exercise_name_$index'),
+              initialValue: exercise['name'] ?? '',
               decoration: const InputDecoration(
                 labelText: 'Název cviku',
                 border: OutlineInputBorder(),
@@ -593,8 +591,9 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
             Row(
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: TextEditingController(text: (exercise['sets'] ?? 3).toString()),
+                  child: TextFormField(
+                    key: ValueKey('exercise_sets_$index'),
+                    initialValue: (exercise['sets'] ?? 3).toString(),
                     decoration: const InputDecoration(
                       labelText: 'Série',
                       border: OutlineInputBorder(),
@@ -609,8 +608,9 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: TextField(
-                    controller: TextEditingController(text: (exercise['reps'] ?? 10).toString()),
+                  child: TextFormField(
+                    key: ValueKey('exercise_reps_$index'),
+                    initialValue: (exercise['reps'] ?? 10).toString(),
                     decoration: const InputDecoration(
                       labelText: 'Opakování',
                       border: OutlineInputBorder(),
@@ -626,8 +626,9 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
               ],
             ),
             const SizedBox(height: 8),
-            TextField(
-              controller: TextEditingController(text: exercise['load'] ?? ''),
+            TextFormField(
+              key: ValueKey('exercise_load_$index'),
+              initialValue: exercise['load'] ?? '',
               decoration: const InputDecoration(
                 labelText: 'Zátěž (% z PR nebo váha)',
                 border: OutlineInputBorder(),

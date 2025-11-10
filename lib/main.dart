@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'auth_wrapper.dart';
 import 'firebase_options.dart';
 
@@ -22,6 +23,16 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Fitness App Pro',
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('cs', 'CZ'),
+        Locale('en', 'US'),
+      ],
+      locale: const Locale('cs', 'CZ'),
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(

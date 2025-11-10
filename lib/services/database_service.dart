@@ -77,6 +77,23 @@ class DatabaseService {
     required List<Map<String, dynamic>> completedExercises,
   }) async {
     try {
+      // Kontrola, zda už není tento trénink dnes dokončen (prevence duplicit)
+      final today = DateTime.now();
+      final todayStart = DateTime(today.year, today.month, today.day);
+      final todayEnd = todayStart.add(const Duration(days: 1));
+      
+      final existingWorkouts = await completedWorkouts
+          .where('user_id', isEqualTo: userId)
+          .where('workout_id', isEqualTo: workoutId)
+          .where('completed_at', isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart))
+          .where('completed_at', isLessThan: Timestamp.fromDate(todayEnd))
+          .get();
+      
+      if (existingWorkouts.docs.isNotEmpty) {
+        print('⚠️  Trénink "$workoutName" už byl dnes dokončen, nepřidávám duplicitu');
+        return;
+      }
+      
       await completedWorkouts.add({
         'user_id': userId,
         'workout_id': workoutId,
@@ -792,34 +809,59 @@ class DatabaseService {
   /// Získá statistiky trenéra
   static Future<Map<String, dynamic>> getTrainerStats(String trainerId) async {
     try {
+      print('📊 Načítání statistik trenéra: $trainerId');
+      
       // Počet klientů
       final clientsSnapshot = await users
           .where('role', isEqualTo: 'client')
           .where('trainer_id', isEqualTo: trainerId)
           .get();
       final clientCount = clientsSnapshot.docs.length;
+      print('👥 Počet klientů: $clientCount');
 
       // Počet vytvořených tréninků
       final workoutsSnapshot = await workouts
           .where('trainer_id', isEqualTo: trainerId)
           .get();
       final workoutCount = workoutsSnapshot.docs.length;
+      print('💪 Počet vytvořených tréninků: $workoutCount');
 
       // Počet dokončených tréninků klientů tento týden
       final now = DateTime.now();
-      final weekStart = now.subtract(Duration(days: now.weekday - 1));
-      final weekStartStr = weekStart.toIso8601String().split('T')[0];
+      // Začátek týdne (pondělí 00:00:00)
+      final weekStart = DateTime(now.year, now.month, now.day - (now.weekday - 1));
+      final weekEnd = weekStart.add(const Duration(days: 7));
+      print('📅 Začátek týdne (pondělí): $weekStart');
+      print('📅 Konec týdne (neděle 23:59): $weekEnd');
+      print('📅 Dnes: $now');
       
+      // Získat všechny dokončené tréninky od začátku týdne
       final completedThisWeek = await completedWorkouts
-          .where('date', isGreaterThanOrEqualTo: weekStartStr)
+          .where('completed_at', isGreaterThanOrEqualTo: Timestamp.fromDate(weekStart))
+          .where('completed_at', isLessThan: Timestamp.fromDate(weekEnd))
           .get();
+      print('✅ Dokončených tréninků celkem tento týden: ${completedThisWeek.docs.length}');
       
       // Filtrovat pouze tréninky klientů tohoto trenéra
-      final clientIds = clientsSnapshot.docs.map((doc) => doc.id).toList();
+      final clientIds = clientsSnapshot.docs.map((doc) => doc.id).toSet();
+      print('🔍 Client IDs trenéra: $clientIds');
+      
+      int matchedCount = 0;
       final weeklyCompletedCount = completedThisWeek.docs.where((doc) {
-        final userId = doc.data() as Map<String, dynamic>;
-        return clientIds.contains(userId['user_id']);
+        final data = doc.data() as Map<String, dynamic>;
+        final userId = data['user_id'];
+        final workoutName = data['workout_name'] ?? 'Bez názvu';
+        final completedAt = (data['completed_at'] as Timestamp?)?.toDate();
+        final matches = clientIds.contains(userId);
+        if (matches) {
+          matchedCount++;
+          print('  ✓ #$matchedCount: "$workoutName" - klient: $userId - čas: $completedAt');
+        } else {
+          print('  ✗ "$workoutName" - user: $userId (není klient tohoto trenéra)');
+        }
+        return matches;
       }).length;
+      print('🎯 Dokončených tréninků klientů trenéra tento týden: $weeklyCompletedCount');
 
       return {
         'client_count': clientCount,
@@ -877,6 +919,49 @@ class DatabaseService {
     } catch (e) {
       print('❌ Chyba při načítání top klientů: $e');
       return [];
+    }
+  }
+
+  /// Utility funkce pro smazání duplicitních dokončených tréninků
+  /// Ponechá pouze nejnovější záznam pro každý workout_id uživatele v daný den
+  static Future<void> removeDuplicateCompletedWorkouts(String userId) async {
+    try {
+      print('🧹 Odstraňování duplicit pro uživatele: $userId');
+      
+      final allWorkouts = await completedWorkouts
+          .where('user_id', isEqualTo: userId)
+          .orderBy('completed_at', descending: true)
+          .get();
+      
+      final seenWorkouts = <String, String>{}; // workout_id+date -> doc_id
+      final toDelete = <String>[];
+      
+      for (var doc in allWorkouts.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final workoutId = data['workout_id'] as String;
+        final date = data['date'] as String;
+        final key = '$workoutId-$date';
+        
+        if (seenWorkouts.containsKey(key)) {
+          // Duplicita - smažeme
+          toDelete.add(doc.id);
+          print('  ❌ Duplicita nalezena: ${data['workout_name']} ($date)');
+        } else {
+          // První (nejnovější) záznam - ponecháme
+          seenWorkouts[key] = doc.id;
+        }
+      }
+      
+      if (toDelete.isNotEmpty) {
+        for (var docId in toDelete) {
+          await completedWorkouts.doc(docId).delete();
+        }
+        print('✅ Odstraněno ${toDelete.length} duplicitních záznamů');
+      } else {
+        print('✅ Žádné duplicity nenalezeny');
+      }
+    } catch (e) {
+      print('❌ Chyba při odstraňování duplicit: $e');
     }
   }
 }

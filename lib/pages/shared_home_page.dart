@@ -8,6 +8,7 @@ import 'dart:typed_data';
 import 'trainer_qr_page.dart';
 import 'qr_scan_page.dart';
 import 'workouts_page.dart';
+import 'workout_detail_page.dart';
 import 'progress_page.dart';
 import 'calendar_page.dart';
 import 'exercises_management_page.dart';
@@ -597,8 +598,16 @@ class _DashboardPage extends StatelessWidget {
           ),
         ),
       ] else ...[
+        // Motivational quote
+        _buildMotivationalQuote(),
+        const SizedBox(height: 16),
+        
         // Today's scheduled workouts
         _buildTodayWorkouts(context, currentUser?.uid ?? ''),
+        const SizedBox(height: 16),
+        
+        // Weekly progress
+        _buildWeeklyProgress(currentUser?.uid ?? ''),
       ],
     ];
   }
@@ -707,6 +716,7 @@ class _DashboardPage extends StatelessWidget {
                   final data = doc.data() as Map<String, dynamic>;
                   final status = data['status'] as String? ?? 'scheduled';
                   final workoutName = data['workout_name'] as String? ?? 'Trénink';
+                  final workoutId = data['workout_id'] as String?;
                   
                   Color statusColor;
                   IconData statusIcon;
@@ -729,53 +739,77 @@ class _DashboardPage extends StatelessWidget {
                       statusText = 'Naplánováno';
                   }
                   
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: statusColor.withOpacity(0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: statusColor.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(statusIcon, color: statusColor, size: 20),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                workoutName,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
+                  return InkWell(
+                    onTap: () async {
+                      // Načti workout data a zobraz detail
+                      if (workoutId != null) {
+                        final workoutDoc = await FirebaseFirestore.instance
+                            .collection('workouts')
+                            .doc(workoutId)
+                            .get();
+                        
+                        if (workoutDoc.exists && context.mounted) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => WorkoutDetailPage(
+                                workoutId: workoutId,
+                                workoutData: workoutDoc.data() as Map<String, dynamic>,
                               ),
-                              Text(
-                                statusText,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: statusColor,
-                                  fontWeight: FontWeight.w600,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: statusColor.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: statusColor.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(statusIcon, color: statusColor, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  workoutName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
                                 ),
-                              ),
-                            ],
+                                Text(
+                                  statusText,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: statusColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        if (status == 'scheduled')
-                          Icon(Icons.arrow_forward_ios, 
-                            size: 16, 
-                            color: Colors.grey[400],
-                          ),
-                      ],
+                          if (status == 'scheduled')
+                            Icon(Icons.arrow_forward_ios, 
+                              size: 16, 
+                              color: Colors.grey[400],
+                            ),
+                        ],
+                      ),
                     ),
                   );
                 }).toList(),
@@ -784,6 +818,354 @@ class _DashboardPage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildMotivationalQuote() {
+    final quotes = [
+      'Push harder than yesterday if you want a different tomorrow.',
+      'The body achieves what the mind believes.',
+      'Don’t stop when you’re tired. Stop when you’re done.',
+      'One day or day one. You decide.',
+      'Discipline is doing what needs to be done, even when you don’t feel like it.',
+      'Progress, not perfection.',
+      'No excuses. Just results.',
+      'It’s not about being the best. It’s about being better than you were yesterday.',
+    ];
+    
+    final today = DateTime.now();
+    final quoteIndex = today.day % quotes.length;
+    final quote = quotes[quoteIndex];
+    
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.purple.shade400,
+            Colors.deepPurple.shade600,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.purple.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.format_quote, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Motivace dne',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '"$quote"',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontStyle: FontStyle.italic,
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWeeklyProgress(String userId) {
+    final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 6));
+    print('📊 Načítám týdenní progress od: $sevenDaysAgo');
+    
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('completed_workouts')
+          .where('user_id', isEqualTo: userId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          print('❌ Chyba při načítání týdenního progressu: ${snapshot.error}');
+          return Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Text('Chyba: ${snapshot.error}', style: const TextStyle(color: Colors.red)),
+            ),
+          );
+        }
+        
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Center(
+              child: CircularProgressIndicator(color: Colors.orange),
+            ),
+          );
+        }
+
+        // Filtruj na posledních 7 dní v kódu místo v dotazu
+        final allWorkouts = snapshot.data?.docs ?? [];
+        final workouts = allWorkouts.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final completedAt = (data['completed_at'] as Timestamp?)?.toDate();
+          if (completedAt == null) return false;
+          return completedAt.isAfter(sevenDaysAgo);
+        }).toList();
+        
+        final totalWorkouts = workouts.length;
+        final targetWorkouts = 5; // Cíl: 5 tréninků týdně
+        final progress = totalWorkouts / targetWorkouts;
+        final percentage = (progress * 100).clamp(0, 100).toInt();
+
+        print('📊 Týdenní progress: Načteno $totalWorkouts tréninků pro uživatele $userId');
+        for (var doc in workouts) {
+          final data = doc.data() as Map<String, dynamic>;
+          final workoutName = data['workout_name'] ?? 'Neznámý';
+          final completedAt = (data['completed_at'] as Timestamp?)?.toDate();
+          print('  - $workoutName (${completedAt?.toString() ?? "bez času"})');
+        }
+
+        // Počet tréninků podle dnů
+        final now = DateTime.now();
+        final weekData = <int, int>{};
+        for (int i = 6; i >= 0; i--) {
+          final day = now.subtract(Duration(days: i));
+          weekData[day.weekday - 1] = 0;
+        }
+
+        for (var doc in workouts) {
+          final data = doc.data() as Map<String, dynamic>;
+          final completedAt = (data['completed_at'] as Timestamp).toDate();
+          final dayIndex = completedAt.weekday - 1;
+          weekData[dayIndex] = (weekData[dayIndex] ?? 0) + 1;
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.trending_up, color: Colors.orange, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Týdenní progres',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: progress >= 1 ? Colors.green : Colors.orange,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '$percentage%',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              
+              // Circular progress
+              Row(
+                children: [
+                  SizedBox(
+                    width: 100,
+                    height: 100,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        SizedBox(
+                          width: 100,
+                          height: 100,
+                          child: CircularProgressIndicator(
+                            value: progress.clamp(0.0, 1.0),
+                            strokeWidth: 10,
+                            backgroundColor: Colors.grey[200],
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              progress >= 1 ? Colors.green : Colors.orange,
+                            ),
+                          ),
+                        ),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '$totalWorkouts',
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: progress >= 1 ? Colors.green : Colors.orange,
+                              ),
+                            ),
+                            Text(
+                              'z $targetWorkouts',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 24),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          progress >= 1 ? '🎉 Skvěle!' : 'Pokračuj!',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          progress >= 1
+                              ? 'Splnil jsi týdenní cíl!'
+                              : 'Ještě ${targetWorkouts - totalWorkouts} ${_getWorkoutWord(targetWorkouts - totalWorkouts)} do cíle',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildWeeklyBar(weekData),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  String _getWorkoutWord(int count) {
+    if (count == 1) return 'trénink';
+    if (count >= 2 && count <= 4) return 'tréninky';
+    return 'tréninků';
+  }
+
+  Widget _buildWeeklyBar(Map<int, int> weekData) {
+    const dayNames = ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'];
+    final maxCount = weekData.values.isEmpty ? 1 : weekData.values.reduce((a, b) => a > b ? a : b);
+    
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: List.generate(7, (index) {
+        final count = weekData[index] ?? 0;
+        final height = maxCount > 0 ? (count / maxCount * 30).clamp(4.0, 30.0) : 4.0;
+        final hasWorkout = count > 0;
+        
+        return Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: Column(
+              children: [
+                Container(
+                  height: height,
+                  decoration: BoxDecoration(
+                    color: hasWorkout ? Colors.orange : Colors.grey[300],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  dayNames[index],
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: hasWorkout ? Colors.orange : Colors.grey[500],
+                    fontWeight: hasWorkout ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }),
     );
   }
 
@@ -1204,6 +1586,8 @@ class _ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<_ProfilePage> {
   String? _displayName;
   String? _photoUrl;
+  String? _trainerId;
+  String? _trainerName;
   bool _isLoadingProfile = true;
   final ImagePicker _picker = ImagePicker();
 
@@ -1222,6 +1606,8 @@ class _ProfilePageState extends State<_ProfilePage> {
         setState(() {
           _displayName = data['display_name'] as String?;
           _photoUrl = data['photo_url'] as String?;
+          _trainerId = data['trainer_id'] as String?;
+          _trainerName = data['trainer_name'] as String?;
           _isLoadingProfile = false;
         });
       } else {
@@ -1522,6 +1908,34 @@ class _ProfilePageState extends State<_ProfilePage> {
                           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                           onTap: _showEditNicknameDialog,
                         ),
+                        // QR skenování pro klienty
+                        if (widget.userRole == 'client') ...[
+                          const Divider(),
+                          ListTile(
+                            leading: Icon(
+                              Icons.qr_code_scanner,
+                              color: _trainerId == null ? Colors.green : Colors.orange,
+                            ),
+                            title: Text(_trainerId == null 
+                                ? 'Propojit se s trenérem' 
+                                : 'Změnit trenéra'),
+                            subtitle: _trainerName != null 
+                                ? Text('Trenér: $_trainerName', 
+                                    style: TextStyle(fontSize: 12, color: Colors.grey[600]))
+                                : null,
+                            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                            onTap: () async {
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const QrScanPage()),
+                              );
+                              // Po návratu znovu načti profil
+                              if (result == true) {
+                                _loadUserProfile();
+                              }
+                            },
+                          ),
+                        ],
                         const Divider(),
                         ListTile(
                           leading: const Icon(Icons.logout, color: Colors.red),

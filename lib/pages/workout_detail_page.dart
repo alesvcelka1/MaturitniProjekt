@@ -471,6 +471,10 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
       if (currentUser != null) {
         final exercises = List<Map<String, dynamic>>.from(widget.workoutData['exercises'] ?? []);
         
+        print('🏋️ Ukládám dokončený trénink pro uživatele: ${currentUser.uid}');
+        print('📝 Workout ID: ${widget.workoutId}');
+        print('📝 Workout Name: ${widget.workoutData['workout_name']}');
+        
         await DatabaseService.saveCompletedWorkout(
           workoutId: widget.workoutId,
           workoutName: widget.workoutData['workout_name'] ?? 'Neznámý trénink',
@@ -484,6 +488,8 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
             'load': exercise['load'] ?? '',
           }).toList(),
         );
+        
+        print('✅ Trénink úspěšně uložen do completed_workouts');
 
         if (!context.mounted) return;
         
@@ -527,7 +533,7 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                   ),
                   const SizedBox(height: 24),
                   const Text(
-                    '🎉 Skvělá práce!',
+                    'Skvělá práce!',
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
