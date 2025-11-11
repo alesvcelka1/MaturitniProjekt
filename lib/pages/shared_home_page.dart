@@ -12,10 +12,13 @@ import 'workout_detail_page.dart';
 import 'progress_page.dart';
 import 'calendar_page.dart';
 import 'exercises_management_page.dart';
+import 'chat_list_page.dart';
+import 'chat_page.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
+import '../services/unread_messages_service.dart';
 
-/// 🏠 Unified home page for both trainers and clients
+/// Unified home page for both trainers and clients
 /// Dynamically shows features based on user role from Firestore
 class SharedHomePage extends StatefulWidget {
   const SharedHomePage({super.key});
@@ -52,6 +55,7 @@ class _SharedHomePageState extends State<SharedHomePage> {
           // User document doesn't exist yet - create it
           _firestore.collection('users').doc(_currentUser.uid).set({
             'email': _currentUser.email,
+            'display_name': _currentUser.displayName ?? _currentUser.email?.split('@')[0] ?? 'Uživatel',
             'role': 'client',
             'created_at': FieldValue.serverTimestamp(),
           });
@@ -195,6 +199,67 @@ class _DashboardPage extends StatelessWidget {
           pinned: true,
           elevation: 0,
           backgroundColor: Colors.transparent,
+          actions: [
+            // Tlačítko pro chat s badge pro nepřečtené zprávy
+            StreamBuilder<int>(
+              stream: UnreadMessagesService.getUnreadCount(),
+              builder: (context, snapshot) {
+                final unreadCount = snapshot.data ?? 0;
+                
+                return Stack(
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: IconButton(
+                        icon: Icon(
+                          unreadCount > 0 ? Icons.forum : Icons.forum_outlined,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ChatListPage(),
+                            ),
+                          );
+                        },
+                        tooltip: 'Zprávy',
+                      ),
+                    ),
+                    if (unreadCount > 0)
+                      Positioned(
+                        right: 10,
+                        top: 8,
+                        child: Container(
+                          width: 14,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white,
+                              width: 2.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ],
           flexibleSpace: FlexibleSpaceBar(
             background: Container(
               decoration: const BoxDecoration(
@@ -532,6 +597,27 @@ class _DashboardPage extends StatelessWidget {
                             ],
                           ),
                         ),
+                        const SizedBox(width: 8),
+                        // Tlačítko pro zahájení chatu
+                        IconButton(
+                          icon: const Icon(Icons.chat_bubble_outline),
+                          color: Colors.green,
+                          iconSize: 20,
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ChatPage(
+                                  chatWithUserId: doc.id,
+                                  chatWithUserName: clientName,
+                                  chatWithUserRole: 'client',
+                                ),
+                              ),
+                            );
+                          },
+                          tooltip: 'Zahájit chat',
+                        ),
+                        const SizedBox(width: 4),
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
@@ -1935,6 +2021,31 @@ class _ProfilePageState extends State<_ProfilePage> {
                               }
                             },
                           ),
+                          // Chat s trenérem - pouze pokud je trenér připojen
+                          if (_trainerId != null) ...[
+                            const Divider(),
+                            ListTile(
+                              leading: const Icon(Icons.chat_bubble, color: Colors.orange),
+                              title: const Text('Napsat trenérovi'),
+                              subtitle: _trainerName != null 
+                                  ? Text('Chat s $_trainerName',
+                                      style: TextStyle(fontSize: 12, color: Colors.grey[600]))
+                                  : null,
+                              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ChatPage(
+                                      chatWithUserId: _trainerId!,
+                                      chatWithUserName: _trainerName ?? 'Trenér',
+                                      chatWithUserRole: 'trainer',
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
                         ],
                         const Divider(),
                         ListTile(

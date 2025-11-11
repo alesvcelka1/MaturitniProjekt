@@ -10,6 +10,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  
   // Inicializuj locale pro kalendář
   await initializeDateFormatting('cs_CZ', null);
   runApp(const MyApp());
