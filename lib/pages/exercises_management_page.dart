@@ -12,13 +12,22 @@ class ExercisesManagementPage extends StatefulWidget {
 
 class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
   List<Map<String, dynamic>> _exercises = [];
+  List<Map<String, dynamic>> _filteredExercises = [];
   bool _isLoading = true;
   String _filter = 'all'; // all, my, public
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadExercises();
+    _searchController.addListener(_filterExercises);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadExercises() async {
@@ -35,7 +44,23 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
       } else {
         _exercises = exercises;
       }
+      _filteredExercises = _exercises;
       _isLoading = false;
+    });
+    _filterExercises();
+  }
+
+  void _filterExercises() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      if (query.isEmpty) {
+        _filteredExercises = _exercises;
+      } else {
+        _filteredExercises = _exercises.where((exercise) {
+          final name = (exercise['name'] as String? ?? '').toLowerCase();
+          return name.contains(query);
+        }).toList();
+      }
     });
   }
 
@@ -58,6 +83,37 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
       ),
       body: Column(
         children: [
+          // Search bar
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.all(16),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Hledat cvik...',
+                prefixIcon: const Icon(Icons.search, color: Colors.orange),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: const Color(0xFFF8F9FA),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+            ),
+          ),
+          
           // Filter tabs
           Container(
             color: Colors.white,
@@ -77,13 +133,13 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : _exercises.isEmpty
+                : _filteredExercises.isEmpty
                     ? _buildEmptyState()
                     : ListView.builder(
                         padding: const EdgeInsets.all(16),
-                        itemCount: _exercises.length,
+                        itemCount: _filteredExercises.length,
                         itemBuilder: (context, index) {
-                          final exercise = _exercises[index];
+                          final exercise = _filteredExercises[index];
                           return _buildExerciseCard(exercise);
                         },
                       ),
