@@ -91,7 +91,7 @@ class _WorkoutExecutionPageState extends State<WorkoutExecutionPage> {
               ),
               const SizedBox(height: 24),
               const Text(
-                '🎉 Výborně!',
+                'Výborně!',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,

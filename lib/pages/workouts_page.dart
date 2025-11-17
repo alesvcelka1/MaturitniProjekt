@@ -6,7 +6,7 @@ import 'qr_scan_page.dart';
 import '../widgets/exercise_selector_dialog.dart';
 import '../services/database_service.dart';
 
-/// 💪 Workouts page - shows different content based on role
+/// Workouts page - shows different content based on role
 class WorkoutsPage extends StatefulWidget {
   final String? userRole;
   final DocumentSnapshot? userDoc;
@@ -324,7 +324,7 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('✅ Trénink smazán'),
+              content: Text('Trénink smazán'),
               backgroundColor: Colors.green,
             ),
           );
@@ -333,7 +333,7 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('❌ Chyba: $e'),
+              content: Text('Chyba: $e'),
               backgroundColor: Colors.red,
             ),
           );
@@ -357,6 +357,10 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
     
     List<String> selectedClientIds = List<String>.from(initialData?['client_ids'] ?? []);
     List<Map<String, dynamic>> exercises = List<Map<String, dynamic>>.from(initialData?['exercises'] ?? []);
+    
+    // Pro naplánování tréninku
+    DateTime? selectedDate;
+    TimeOfDay? selectedTime;
 
     showModalBottomSheet(
       context: context,
@@ -485,6 +489,99 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
                   _buildClientSelector(context, selectedClientIds, setSheetState),
                   const SizedBox(height: 24),
 
+                  // Naplánovat trénink (volitelné)
+                  Card(
+                    color: Colors.blue.withOpacity(0.05),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.calendar_today, color: Colors.blue[700], size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Naplánovat trénink (volitelné)',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue[700],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () async {
+                                    final date = await showDatePicker(
+                                      context: context,
+                                      initialDate: selectedDate ?? DateTime.now(),
+                                      firstDate: DateTime.now(),
+                                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                                    );
+                                    if (date != null) {
+                                      setSheetState(() => selectedDate = date);
+                                    }
+                                  },
+                                  icon: const Icon(Icons.calendar_today, size: 18),
+                                  label: Text(
+                                    selectedDate != null
+                                        ? '${selectedDate!.day}.${selectedDate!.month}.${selectedDate!.year}'
+                                        : 'Vybrat datum',
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: selectedDate == null ? null : () async {
+                                    final time = await showTimePicker(
+                                      context: context,
+                                      initialTime: selectedTime ?? TimeOfDay.now(),
+                                    );
+                                    if (time != null) {
+                                      setSheetState(() => selectedTime = time);
+                                    }
+                                  },
+                                  icon: const Icon(Icons.access_time, size: 18),
+                                  label: Text(
+                                    selectedTime != null
+                                        ? '${selectedTime!.hour}:${selectedTime!.minute.toString().padLeft(2, '0')}'
+                                        : 'Čas',
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                              ),
+                              if (selectedDate != null)
+                                IconButton(
+                                  onPressed: () {
+                                    setSheetState(() {
+                                      selectedDate = null;
+                                      selectedTime = null;
+                                    });
+                                  },
+                                  icon: const Icon(Icons.clear, size: 18),
+                                  tooltip: 'Zrušit datum',
+                                ),
+                            ],
+                          ),
+                          if (selectedDate != null) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              'Trénink bude automaticky přiřazen vybraným klientům na ${selectedDate!.day}.${selectedDate!.month}.${selectedDate!.year}${selectedTime != null ? ' v ${selectedTime!.hour}:${selectedTime!.minute.toString().padLeft(2, '0')}' : ''}',
+                              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
                   // Akční tlačítka
                   Row(
                     children: [
@@ -505,6 +602,8 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
                             exercises,
                             int.tryParse(durationController.text) ?? 30,
                             selectedClientIds,
+                            selectedDate,
+                            selectedTime,
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.orange,
@@ -541,12 +640,28 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    'Cvik ${index + 1}',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Cvik ${index + 1}',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      if (exercise['name']?.toString().isNotEmpty ?? false)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            exercise['name'],
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-                TextButton.icon(
+                ElevatedButton.icon(
                   onPressed: () async {
                     final selectedExercise = await showDialog<Map<String, dynamic>>(
                       context: context,
@@ -564,8 +679,13 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
                     }
                   },
                   icon: const Icon(Icons.search, size: 18),
-                  label: const Text('Vybrat', style: TextStyle(fontSize: 12)),
+                  label: const Text('Vybrat cvik', style: TextStyle(fontSize: 12)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                  ),
                 ),
+                const SizedBox(width: 8),
                 IconButton(
                   onPressed: onDelete,
                   icon: const Icon(Icons.delete, color: Colors.red),
@@ -573,21 +693,7 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            TextFormField(
-              key: ValueKey('exercise_name_$index'),
-              initialValue: exercise['name'] ?? '',
-              decoration: const InputDecoration(
-                labelText: 'Název cviku',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-              onChanged: (value) {
-                exercise['name'] = value;
-                onUpdate(exercise);
-              },
-            ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
@@ -717,6 +823,8 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
     List<Map<String, dynamic>> exercises,
     int estimatedDuration,
     List<String> clientIds,
+    DateTime? scheduledDate,
+    TimeOfDay? scheduledTime,
   ) async {
     final currentUser = FirebaseAuth.instance.currentUser;
     
@@ -754,18 +862,56 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
         'created_at': FieldValue.serverTimestamp(),
       };
 
+      String? createdWorkoutId;
+
       if (workoutId != null) {
         await FirebaseFirestore.instance.collection('workouts').doc(workoutId).update(workoutData);
+        createdWorkoutId = workoutId;
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('✅ Trénink upraven'), backgroundColor: Colors.green),
+            const SnackBar(content: Text('Trénink upraven'), backgroundColor: Colors.green),
           );
         }
       } else {
-        await FirebaseFirestore.instance.collection('workouts').add(workoutData);
+        final doc = await FirebaseFirestore.instance.collection('workouts').add(workoutData);
+        createdWorkoutId = doc.id;
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('✅ Trénink vytvořen'), backgroundColor: Colors.green),
+            const SnackBar(content: Text('Trénink vytvořen'), backgroundColor: Colors.green),
+          );
+        }
+      }
+
+      // Pokud je vybrané datum, naplánuj trénink pro každého klienta
+      if (scheduledDate != null && createdWorkoutId != null && clientIds.isNotEmpty) {
+        DateTime finalDateTime = scheduledDate;
+        if (scheduledTime != null) {
+          finalDateTime = DateTime(
+            scheduledDate.year,
+            scheduledDate.month,
+            scheduledDate.day,
+            scheduledTime.hour,
+            scheduledTime.minute,
+          );
+        }
+
+        for (final clientId in clientIds) {
+          await DatabaseService.scheduleWorkout(
+            workoutId: createdWorkoutId,
+            workoutName: workoutName,
+            userId: clientId,
+            trainerId: currentUser!.uid,
+            scheduledDate: finalDateTime,
+            notes: description.isNotEmpty ? description : null,
+          );
+        }
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Trénink naplánován pro ${clientIds.length} klient${clientIds.length == 1 ? 'a' : 'ů'}'),
+              backgroundColor: Colors.green,
+            ),
           );
         }
       }
@@ -774,7 +920,7 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('❌ Chyba: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Chyba: $e'), backgroundColor: Colors.red),
         );
       }
     }

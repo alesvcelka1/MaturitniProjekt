@@ -37,20 +37,20 @@ class _QrScanPageState extends State<QrScanPage> {
     setState(() => _isProcessing = true);
 
     try {
-      // 1️⃣ Kontrola formátu QR kódu
+      // Krok 1: Kontrola formátu QR kódu
       if (!qrData.startsWith('trainer:')) {
         _showErrorSnackBar('Neplatný QR kód! Musí být od trenéra.');
         return;
       }
 
-      // 2️⃣ Extrakce ID trenéra z QR kódu
+      // Krok 2: Extrakce ID trenéra z QR kódu
       final String trainerId = qrData.substring(8); // Odstraní "trainer:"
       if (trainerId.isEmpty) {
         _showErrorSnackBar('Neplatné ID trenéra v QR kódu!');
         return;
       }
 
-      // 3️⃣ Získání aktuálního uživatele (klienta)
+      // Krok 3: Získání aktuálního uživatele (klienta)
       final User? currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) {
         _showErrorSnackBar('Nejsi přihlášený!');
@@ -59,12 +59,12 @@ class _QrScanPageState extends State<QrScanPage> {
 
       final String clientId = currentUser.uid;
 
-      // 4️⃣ Reference na Firestore dokumenty
+      // Krok 4: Reference na Firestore dokumenty
       final FirebaseFirestore firestore = FirebaseFirestore.instance;
       final DocumentReference clientDoc = firestore.collection('users').doc(clientId);
       final DocumentReference trainerDoc = firestore.collection('users').doc(trainerId);
 
-      // 5️⃣ Kontrola existence trenéra a jeho role
+      // Krok 5: Kontrola existence trenéra a jeho role
       final DocumentSnapshot trainerSnapshot = await trainerDoc.get();
       if (!trainerSnapshot.exists) {
         _showErrorSnackBar('Trenér s tímto ID neexistuje!');
@@ -83,7 +83,7 @@ class _QrScanPageState extends State<QrScanPage> {
                          trainerData?['email'] as String? ?? 
                          'Trenér';
 
-      // 6️⃣ Kontrola, zda už klient není propojený s jiným trenérem
+      // Krok 6: Kontrola, zda už klient není propojený s jiným trenérem
       final DocumentSnapshot clientSnapshot = await clientDoc.get();
       if (clientSnapshot.exists) {
         final clientData = clientSnapshot.data() as Map<String, dynamic>?;
@@ -104,7 +104,7 @@ class _QrScanPageState extends State<QrScanPage> {
         }
       }
 
-      // 7️⃣ Batch operace pro atomické aktualizace
+      // Krok 7: Batch operace pro atomické aktualizace
       final WriteBatch batch = firestore.batch();
 
       // Aktualizace klienta - nastavení role a přiřazení trenéra
@@ -123,10 +123,10 @@ class _QrScanPageState extends State<QrScanPage> {
         'clients': FieldValue.arrayUnion([clientId]),
       }, SetOptions(merge: true));
 
-      // 8️⃣ Spuštění batch operace
+      // Krok 8: Spuštění batch operace
       await batch.commit();
 
-      // 9️⃣ Zobrazení úspěšné zprávy
+      // Krok 9: Zobrazení úspěšné zprávy
       if (mounted) {
         _showSuccessSnackBar('Úspěšně jsi se propojil s trenérem $trainerName!');
         

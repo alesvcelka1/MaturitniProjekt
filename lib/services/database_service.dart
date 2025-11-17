@@ -9,7 +9,7 @@ class DatabaseService {
   /// Reference na kolekce
   static CollectionReference get workouts => _firestore.collection('workouts');
   static CollectionReference get users => _firestore.collection('users');
-  static CollectionReference get exercises => _firestore.collection('exercises');
+  static CollectionReference get exercises => _firestore.collection('exercises_cs');
   static CollectionReference get completedWorkouts => _firestore.collection('completed_workouts');
   static CollectionReference get personalRecords => _firestore.collection('personal_records');
   static CollectionReference get scheduledWorkouts => _firestore.collection('scheduled_workouts');
@@ -26,9 +26,9 @@ class DatabaseService {
         'last_login': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
       
-      print('👤 Profil uživatele vytvořen/aktualizován: ${user.email}');
+      print('Profil uživatele vytvořen/aktualizován: ${user.email}');
     } catch (e) {
-      print('❌ Chyba při vytváření profilu: $e');
+      print('Chyba při vytváření profilu: $e');
     }
   }
 
@@ -63,7 +63,7 @@ class DatabaseService {
         return data;
       }).toList();
     } catch (e) {
-      print('❌ Chyba při načítání klientů: $e');
+      print('Chyba při načítání klientů: $e');
       return [];
     }
   }
@@ -90,7 +90,7 @@ class DatabaseService {
           .get();
       
       if (existingWorkouts.docs.isNotEmpty) {
-        print('⚠️  Trénink "$workoutName" už byl dnes dokončen, nepřidávám duplicitu');
+        print('Trénink "$workoutName" už byl dnes dokončen, nepřidávám duplicitu');
         return;
       }
       
@@ -104,9 +104,9 @@ class DatabaseService {
         'date': DateTime.now().toIso8601String().split('T')[0], // YYYY-MM-DD format
       });
       
-      print('✅ Dokončený trénink uložen: $workoutName');
+      print('Dokončený trénink uložen: $workoutName');
     } catch (e) {
-      print('❌ Chyba při ukládání dokončeného tréninku: $e');
+      print('Chyba při ukládání dokončeného tréninku: $e');
       rethrow;
     }
   }
@@ -189,7 +189,7 @@ class DatabaseService {
         'total_duration_minutes': (totalDurationSeconds / 60).round(),
       };
     } catch (e) {
-      print('❌ Chyba při načítání statistik: $e');
+      print('Chyba při načítání statistik: $e');
       return {
         'total_workouts': 0,
         'current_streak': 0,
@@ -223,7 +223,7 @@ class DatabaseService {
       
       return workouts;
     } catch (e) {
-      print('❌ Chyba při načítání posledních tréninků: $e');
+      print('Chyba při načítání posledních tréninků: $e');
       return [];
     }
   }
@@ -239,7 +239,7 @@ class DatabaseService {
       
       return snapshot.docs.isNotEmpty;
     } catch (e) {
-      print('❌ Chyba při kontrole dokončení tréninku: $e');
+      print('Chyba při kontrole dokončení tréninku: $e');
       return false;
     }
   }
@@ -255,7 +255,7 @@ class DatabaseService {
           .map((doc) => (doc.data() as Map<String, dynamic>)['workout_id'] as String)
           .toSet();
     } catch (e) {
-      print('❌ Chyba při načítání dokončených tréninků: $e');
+      print('Chyba při načítání dokončených tréninků: $e');
       return <String>{};
     }
   }
@@ -301,14 +301,14 @@ class DatabaseService {
       if (existingPR.docs.isNotEmpty) {
         // Aktualizuj existující PR
         await personalRecords.doc(existingPR.docs.first.id).update(prData);
-        print('✅ PR aktualizován: $exerciseName - $weight kg x $reps');
+        print('PR aktualizován: $exerciseName - $weight kg x $reps');
       } else {
         // Vytvoř nový PR
         await personalRecords.add(prData);
-        print('✅ Nový PR uložen: $exerciseName - $weight kg x $reps');
+        print('Nový PR uložen: $exerciseName - $weight kg x $reps');
       }
     } catch (e) {
-      print('❌ Chyba při ukládání PR: $e');
+      print('Chyba při ukládání PR: $e');
       rethrow;
     }
   }
@@ -336,7 +336,7 @@ class DatabaseService {
       data['id'] = snapshot.docs.first.id;
       return data;
     } catch (e) {
-      print('❌ Chyba při načítání PR: $e');
+      print('Chyba při načítání PR: $e');
       return null;
     }
   }
@@ -360,7 +360,7 @@ class DatabaseService {
       
       return prs;
     } catch (e) {
-      print('❌ Chyba při načítání všech PRs: $e');
+      print('Chyba při načítání všech PRs: $e');
       return {};
     }
   }
@@ -392,7 +392,7 @@ class DatabaseService {
       final percentage = double.tryParse(percentageStr);
       
       if (percentage == null) {
-        print('⚠️ Neplatné procento: $loadString');
+        print('Neplatné procento: $loadString');
         return null;
       }
       
@@ -403,17 +403,17 @@ class DatabaseService {
       );
       
       if (pr == null) {
-        print('⚠️ PR neexistuje pro cvik: $exerciseName');
+        print('PR neexistuje pro cvik: $exerciseName');
         return null;
       }
       
       final prWeight = pr['weight'] as double;
       final calculatedWeight = (prWeight * percentage) / 100.0;
       
-      print('✅ Vypočítáno: $percentage% z $prWeight kg = $calculatedWeight kg');
+      print('Vypočítáno: $percentage% z $prWeight kg = $calculatedWeight kg');
       return calculatedWeight;
     } catch (e) {
-      print('❌ Chyba při výpočtu váhy z procent: $e');
+      print('Chyba při výpočtu váhy z procent: $e');
       return null;
     }
   }
@@ -493,51 +493,33 @@ class DatabaseService {
       if (exerciseId != null) {
         // Aktualizace existujícího cviku
         await exercises.doc(exerciseId).update(exerciseData);
-        print('✅ Cvik aktualizován: $name');
+        print('Cvik aktualizován: $name');
         return exerciseId;
       } else {
         // Vytvoření nového cviku
         exerciseData['created_at'] = FieldValue.serverTimestamp();
         final doc = await exercises.add(exerciseData);
-        print('✅ Nový cvik vytvořen: $name');
+        print('Nový cvik vytvořen: $name');
         return doc.id;
       }
     } catch (e) {
-      print('❌ Chyba při ukládání cviku: $e');
+      print('Chyba při ukládání cviku: $e');
       rethrow;
     }
   }
 
-  /// Načte všechny veřejné cviky + cviky vytvořené aktuálním uživatelem
+  /// Načte všechny cviky z exercises_cs
   static Future<List<Map<String, dynamic>>> getAllExercises() async {
     try {
-      final currentUser = _auth.currentUser;
-      
-      // Načti veřejné cviky
-      final publicSnapshot = await exercises
-          .where('is_public', isEqualTo: true)
-          .get();
+      // Načti všechny cviky z exercises_cs (bez filtru is_public)
+      final snapshot = await exercises.get();
       
       final allExercises = <Map<String, dynamic>>[];
       
-      for (final doc in publicSnapshot.docs) {
+      for (final doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
         data['id'] = doc.id;
         allExercises.add(data);
-      }
-      
-      // Pokud je uživatel přihlášen, přidej i jeho privátní cviky
-      if (currentUser != null) {
-        final userSnapshot = await exercises
-            .where('created_by', isEqualTo: currentUser.uid)
-            .where('is_public', isEqualTo: false)
-            .get();
-        
-        for (final doc in userSnapshot.docs) {
-          final data = doc.data() as Map<String, dynamic>;
-          data['id'] = doc.id;
-          allExercises.add(data);
-        }
       }
       
       // Seřaď abecedně podle názvu
@@ -546,7 +528,7 @@ class DatabaseService {
       
       return allExercises;
     } catch (e) {
-      print('❌ Chyba při načítání cviků: $e');
+      print('Chyba při načítání cviků: $e');
       return [];
     }
   }
@@ -563,7 +545,7 @@ class DatabaseService {
         return name.contains(lowercaseQuery) || description.contains(lowercaseQuery);
       }).toList();
     } catch (e) {
-      print('❌ Chyba při vyhledávání cviků: $e');
+      print('Chyba při vyhledávání cviků: $e');
       return [];
     }
   }
@@ -580,7 +562,7 @@ class DatabaseService {
         return muscleGroups.any((group) => exerciseMuscles.contains(group));
       }).toList();
     } catch (e) {
-      print('❌ Chyba při filtrování cviků: $e');
+      print('Chyba při filtrování cviků: $e');
       return [];
     }
   }
@@ -595,7 +577,7 @@ class DatabaseService {
           .where((exercise) => exercise['difficulty'] == difficulty)
           .toList();
     } catch (e) {
-      print('❌ Chyba při filtrování cviků podle obtížnosti: $e');
+      print('Chyba při filtrování cviků podle obtížnosti: $e');
       return [];
     }
   }
@@ -610,7 +592,7 @@ class DatabaseService {
       data['id'] = doc.id;
       return data;
     } catch (e) {
-      print('❌ Chyba při načítání detailu cviku: $e');
+      print('Chyba při načítání detailu cviku: $e');
       return null;
     }
   }
@@ -626,15 +608,15 @@ class DatabaseService {
       
       final data = doc.data() as Map<String, dynamic>;
       if (data['created_by'] != currentUser.uid) {
-        print('⚠️ Nelze smazat cvik vytvořený jiným uživatelem');
+        print('Nelze smazat cvik vytvořený jiným uživatelem');
         return false;
       }
       
       await exercises.doc(exerciseId).delete();
-      print('✅ Cvik smazán');
+      print('Cvik smazán');
       return true;
     } catch (e) {
-      print('❌ Chyba při mazání cviku: $e');
+      print('Chyba při mazání cviku: $e');
       return false;
     }
   }
@@ -675,10 +657,10 @@ class DatabaseService {
         'notes': notes,
       });
       
-      print('✅ Trénink naplánován na: ${scheduledDate.toString()}');
+      print('Trénink naplánován na: ${scheduledDate.toString()}');
       return doc.id;
     } catch (e) {
-      print('❌ Chyba při plánování tréninku: $e');
+      print('Chyba při plánování tréninku: $e');
       rethrow;
     }
   }
@@ -711,7 +693,7 @@ class DatabaseService {
         return data;
       }).toList();
     } catch (e) {
-      print('❌ Chyba při načítání naplánovaných tréninků: $e');
+      print('Chyba při načítání naplánovaných tréninků: $e');
       return [];
     }
   }
@@ -744,7 +726,7 @@ class DatabaseService {
         return data;
       }).toList();
     } catch (e) {
-      print('❌ Chyba při načítání tréninků trenéra: $e');
+      print('Chyba při načítání tréninků trenéra: $e');
       return [];
     }
   }
@@ -757,9 +739,9 @@ class DatabaseService {
         'completed_at': FieldValue.serverTimestamp(),
       });
       
-      print('✅ Naplánovaný trénink dokončen');
+      print('Naplánovaný trénink dokončen');
     } catch (e) {
-      print('❌ Chyba při dokončování naplánovaného tréninku: $e');
+      print('Chyba při dokončování naplánovaného tréninku: $e');
       rethrow;
     }
   }
@@ -771,9 +753,9 @@ class DatabaseService {
         'status': 'cancelled',
       });
       
-      print('✅ Naplánovaný trénink zrušen');
+      print('Naplánovaný trénink zrušen');
     } catch (e) {
-      print('❌ Chyba při rušení naplánovaného tréninku: $e');
+      print('Chyba při rušení naplánovaného tréninku: $e');
       rethrow;
     }
   }
@@ -782,9 +764,9 @@ class DatabaseService {
   static Future<void> deleteScheduledWorkout(String scheduledWorkoutId) async {
     try {
       await scheduledWorkouts.doc(scheduledWorkoutId).delete();
-      print('✅ Naplánovaný trénink smazán');
+      print('Naplánovaný trénink smazán');
     } catch (e) {
-      print('❌ Chyba při mazání naplánovaného tréninku: $e');
+      print('Chyba při mazání naplánovaného tréninku: $e');
       rethrow;
     }
   }
@@ -799,9 +781,9 @@ class DatabaseService {
         'scheduled_date': Timestamp.fromDate(newDate),
       });
       
-      print('✅ Trénink přesunut na: ${newDate.toString()}');
+      print('Trénink přesunut na: ${newDate.toString()}');
     } catch (e) {
-      print('❌ Chyba při přesouvání tréninku: $e');
+      print('Chyba při přesouvání tréninku: $e');
       rethrow;
     }
   }
@@ -809,7 +791,7 @@ class DatabaseService {
   /// Získá statistiky trenéra
   static Future<Map<String, dynamic>> getTrainerStats(String trainerId) async {
     try {
-      print('📊 Načítání statistik trenéra: $trainerId');
+      print('Načítání statistik trenéra: $trainerId');
       
       // Počet klientů
       final clientsSnapshot = await users
@@ -824,7 +806,7 @@ class DatabaseService {
           .where('trainer_id', isEqualTo: trainerId)
           .get();
       final workoutCount = workoutsSnapshot.docs.length;
-      print('💪 Počet vytvořených tréninků: $workoutCount');
+      print('Počet vytvořených tréninků: $workoutCount');
 
       // Počet dokončených tréninků klientů tento týden
       final now = DateTime.now();
@@ -840,7 +822,7 @@ class DatabaseService {
           .where('completed_at', isGreaterThanOrEqualTo: Timestamp.fromDate(weekStart))
           .where('completed_at', isLessThan: Timestamp.fromDate(weekEnd))
           .get();
-      print('✅ Dokončených tréninků celkem tento týden: ${completedThisWeek.docs.length}');
+      print('Dokončených tréninků celkem tento týden: ${completedThisWeek.docs.length}');
       
       // Filtrovat pouze tréninky klientů tohoto trenéra
       final clientIds = clientsSnapshot.docs.map((doc) => doc.id).toSet();
@@ -874,7 +856,7 @@ class DatabaseService {
         }).toList(),
       };
     } catch (e) {
-      print('❌ Chyba při načítání statistik trenéra: $e');
+      print('Chyba při načítání statistik trenéra: $e');
       return {
         'client_count': 0,
         'workout_count': 0,
@@ -917,7 +899,7 @@ class DatabaseService {
 
       return clientStats.take(limit).toList();
     } catch (e) {
-      print('❌ Chyba při načítání top klientů: $e');
+      print('Chyba při načítání top klientů: $e');
       return [];
     }
   }
@@ -945,7 +927,7 @@ class DatabaseService {
         if (seenWorkouts.containsKey(key)) {
           // Duplicita - smažeme
           toDelete.add(doc.id);
-          print('  ❌ Duplicita nalezena: ${data['workout_name']} ($date)');
+          print('  Duplicita nalezena: ${data['workout_name']} ($date)');
         } else {
           // První (nejnovější) záznam - ponecháme
           seenWorkouts[key] = doc.id;
@@ -956,12 +938,12 @@ class DatabaseService {
         for (var docId in toDelete) {
           await completedWorkouts.doc(docId).delete();
         }
-        print('✅ Odstraněno ${toDelete.length} duplicitních záznamů');
+        print('Odstraněno ${toDelete.length} duplicitních záznamů');
       } else {
-        print('✅ Žádné duplicity nenalezeny');
+        print('Žádné duplicity nenalezeny');
       }
     } catch (e) {
-      print('❌ Chyba při odstraňování duplicit: $e');
+      print('Chyba při odstraňování duplicit: $e');
     }
   }
 }

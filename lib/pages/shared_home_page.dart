@@ -985,7 +985,7 @@ class _DashboardPage extends StatelessWidget {
 
   Widget _buildWeeklyProgress(String userId) {
     final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 6));
-    print('📊 Načítám týdenní progress od: $sevenDaysAgo');
+    print('Načítám týdenní progress od: $sevenDaysAgo');
     
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
@@ -994,7 +994,7 @@ class _DashboardPage extends StatelessWidget {
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          print('❌ Chyba při načítání týdenního progressu: ${snapshot.error}');
+          print('Chyba při načítání týdenního progressu: ${snapshot.error}');
           return Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -1048,7 +1048,7 @@ class _DashboardPage extends StatelessWidget {
         final progress = totalWorkouts / targetWorkouts;
         final percentage = (progress * 100).clamp(0, 100).toInt();
 
-        print('📊 Týdenní progress: Načteno $totalWorkouts tréninků pro uživatele $userId');
+        print('Týdenní progress: Načteno $totalWorkouts tréninků pro uživatele $userId');
         for (var doc in workouts) {
           final data = doc.data() as Map<String, dynamic>;
           final workoutName = data['workout_name'] ?? 'Neznámý';
@@ -1179,7 +1179,7 @@ class _DashboardPage extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          progress >= 1 ? '🎉 Skvěle!' : 'Pokračuj!',
+                          progress >= 1 ? 'Skvěle!' : 'Pokračuj!',
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -1630,7 +1630,7 @@ class _DashboardPage extends StatelessWidget {
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✅ Klient $email úspěšně přidán!'),
+            content: Text('Klient $email úspěšně přidán!'),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 3),
           ),
@@ -1649,7 +1649,7 @@ class _DashboardPage extends StatelessWidget {
         // Zobrazíme chybu
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('❌ Chyba při přidávání klienta: $e'),
+            content: Text('Chyba při přidávání klienta: $e'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 4),
           ),

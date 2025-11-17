@@ -49,12 +49,12 @@ class _TrainerQrPageState extends State<TrainerQrPage> {
           'updated_at': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
 
-        print('✅ Uživatel ${user.email} nastaven jako trenér');
+        print('Uživatel ${user.email} nastaven jako trenér');
       } else {
-        print('ℹ️ Uživatel ${user.email} už je trenér');
+        print('Uživatel ${user.email} už je trenér');
       }
     } catch (e) {
-      print('❌ Chyba při nastavování role trenéra: $e');
+      print('Chyba při nastavování role trenéra: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -72,7 +72,7 @@ class _TrainerQrPageState extends State<TrainerQrPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 1️⃣ Získání aktuálního Firebase uživatele (trenér)
+    // Krok 1: Získání aktuálního Firebase uživatele (trenér)
     final User? user = FirebaseAuth.instance.currentUser;
     
     // Kontrola, zda je uživatel přihlášený
@@ -106,11 +106,11 @@ class _TrainerQrPageState extends State<TrainerQrPage> {
       );
     }
 
-    // 2️⃣ Vytvoření QR kódu s formátem "trainer:<uid>"
+    // Krok 2: Vytvoření QR kódu s formátem "trainer:<uid>"
     final String qrData = 'trainer:${user.uid}';
 
     return Scaffold(
-      // 3️⃣ Moderní oranžová AppBar
+      // Krok 3: Moderní oranžová AppBar
       appBar: AppBar(
         title: const Text(
           'Můj QR kód',
@@ -122,7 +122,7 @@ class _TrainerQrPageState extends State<TrainerQrPage> {
         centerTitle: true,
       ),
       
-      // 4️⃣ Tělo stránky s QR kódem
+      // Krok 4: Tělo stránky s QR kódem
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -163,7 +163,7 @@ class _TrainerQrPageState extends State<TrainerQrPage> {
                 
                 const SizedBox(height: 32),
                 
-                // 5️⃣ QR kód v bílém kontejneru
+                // Krok 5: QR kód v bílém kontejneru
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
@@ -215,7 +215,7 @@ class _TrainerQrPageState extends State<TrainerQrPage> {
                 
                 const SizedBox(height: 32),
                 
-                // 6️⃣ Pomocný text
+                // Krok 6: Pomocný text
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(

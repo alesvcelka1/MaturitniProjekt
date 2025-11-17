@@ -57,44 +57,44 @@ class AuthService {
   /// Přihlášení přes Google
   Future<String?> signInWithGoogle() async {
     try {
-      print('🔄 Spouštím Google Sign-In...');
+      print('Spouštím Google Sign-In...');
       UserCredential userCred;
 
       if (kIsWeb) {
         // Web: použít popup flow
-        print('🌐 Web platform detected');
+        print('Web platform detected');
         final GoogleAuthProvider provider = GoogleAuthProvider();
         provider.addScope('email');
         userCred = await _auth.signInWithPopup(provider);
       } else {
         // Mobil (Android/iOS): GoogleSignIn plugin
-        print('📱 Mobile platform detected');
+        print('Mobile platform detected');
         final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
         if (googleUser == null) {
-          print('❌ Uživatel zrušil Google přihlášení');
+          print('Uživatel zrušil Google přihlášení');
           return 'Přihlášení zrušeno.';
         }
-        print('✅ Google účet vybrán: ${googleUser.email}');
+        print('Google účet vybrán: ${googleUser.email}');
         
         final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-        print('🔑 Získávám autentifikační tokeny...');
+        print('Získávám autentifikační tokeny...');
         
         final OAuthCredential credential = GoogleAuthProvider.credential(
           accessToken: googleAuth.accessToken,
           idToken: googleAuth.idToken,
         );
-        print('🔥 Přihlašuji se do Firebase...');
+        print('Přihlašuji se do Firebase...');
         userCred = await _auth.signInWithCredential(credential);
       }
 
-      print('🎉 Firebase přihlášení úspěšné! UID: ${userCred.user!.uid}');
+      print('Firebase přihlášení úspěšné! UID: ${userCred.user!.uid}');
 
       // Vytvoření nebo aktualizace dokumentu v Firestore (pokud neexistuje)
       final String uid = userCred.user!.uid;
       final DocumentReference<Map<String, dynamic>> userDoc = _firestore.collection('users').doc(uid);
       final docSnap = await userDoc.get();
       if (!docSnap.exists) {
-        print('📝 Vytvářím nový uživatelský dokument...');
+        print('Vytvářím nový uživatelský dokument...');
         await userDoc.set({
           'email': userCred.user!.email,
           'createdAt': FieldValue.serverTimestamp(),
@@ -102,21 +102,21 @@ class AuthService {
           'role': 'client', // DŮLEŽITÉ: defaultní role
         }, SetOptions(merge: true));
       } else {
-        print('📖 Uživatelský dokument už existuje');
+        print('Uživatelský dokument už existuje');
       }
 
       return null; // úspěch
     } on FirebaseAuthException catch (e) {
-      print('🔥 Firebase Auth Exception: ${e.code} - ${e.message}');
+      print('Firebase Auth Exception: ${e.code} - ${e.message}');
       return _getLocalizedErrorMessage(e.code);
     } on PlatformException catch (e) {
       // Typicky: nepodporovaná platforma nebo špatná konfigurace Sign-In
       final code = e.code.toString();
       final message = e.message ?? '';
-      print('📱 Platform Exception: $code - $message');
+      print('Platform Exception: $code - $message');
       return 'Platformní chyba: $code ${message.isNotEmpty ? '- ' + message : ''}';
     } catch (e) {
-      print('💥 Neočekávaná chyba: $e');
+      print('Neočekávaná chyba: $e');
       return 'Neočekávaná chyba: ${e.toString()}';
     }
   }

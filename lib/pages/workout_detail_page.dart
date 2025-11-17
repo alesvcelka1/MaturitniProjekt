@@ -298,9 +298,12 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+      child: InkWell(
+        onTap: () => _showExerciseDetailDialog(exercise),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
@@ -402,8 +405,27 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                 ),
               ),
             ],
+            // Detail button
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _showExerciseDetailDialog(exercise),
+                icon: const Icon(Icons.info_outline),
+                label: const Text('Zobrazit detail cviku'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.orange,
+                  side: const BorderSide(color: Colors.orange, width: 1.5),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -465,15 +487,265 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
     );
   }
 
+  void _showExerciseDetailDialog(Map<String, dynamic> exercise) {
+    final name = exercise['name'] ?? 'Neznámý cvik';
+    
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 500),
+          child: FutureBuilder<Map<String, dynamic>?>(
+            future: _loadExerciseDetails(name),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Padding(
+                  padding: EdgeInsets.all(40),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(color: Colors.orange),
+                      SizedBox(height: 16),
+                      Text('Načítám detail cviku...'),
+                    ],
+                  ),
+                );
+              }
+              
+              if (!snapshot.hasData || snapshot.data == null) {
+                return Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.error_outline, size: 48, color: Colors.orange),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Detail cviku není k dispozici',
+                        style: TextStyle(fontSize: 16),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text('Zavřít'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              
+              final exerciseDetail = snapshot.data!;
+              final target = exerciseDetail['target'] as String? ?? '';
+              final bodyPart = exerciseDetail['bodyPart'] as String? ?? '';
+              final equipment = exerciseDetail['equipment'] as String? ?? '';
+              final secondaryMuscles = (exerciseDetail['secondaryMuscles'] as List?)?.cast<String>() ?? [];
+              final instructions = (exerciseDetail['instructions'] as List?)?.cast<String>() ?? [];
+              
+              return SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _capitalizeWords(name),
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          
+                          // Info chips
+                          if (target.isNotEmpty || bodyPart.isNotEmpty || equipment.isNotEmpty)
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                if (target.isNotEmpty)
+                                  _buildDetailChip(
+                                    icon: Icons.my_location,
+                                    label: 'Cíl: ${_capitalizeWords(target)}',
+                                    color: Colors.orange,
+                                  ),
+                                if (bodyPart.isNotEmpty)
+                                  _buildDetailChip(
+                                    icon: Icons.accessibility_new,
+                                    label: _capitalizeWords(bodyPart),
+                                    color: Colors.blue,
+                                  ),
+                                if (equipment.isNotEmpty)
+                                  _buildDetailChip(
+                                    icon: Icons.fitness_center,
+                                    label: _capitalizeWords(equipment),
+                                    color: Colors.green,
+                                  ),
+                              ],
+                            ),
+                          
+                          // Secondary muscles
+                          if (secondaryMuscles.isNotEmpty) ...[
+                            const SizedBox(height: 20),
+                            const Text(
+                              'Sekundární svaly:',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: secondaryMuscles
+                                  .map(
+                                    (muscle) => Chip(
+                                      label: Text(
+                                        _capitalizeWords(muscle.toString()),
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                      backgroundColor: Colors.grey[200],
+                                      padding: EdgeInsets.zero,
+                                    ),
+                                  )
+                                  .toList(),
+                            ),
+                          ],
+                          
+                          // Instructions
+                          if (instructions.isNotEmpty) ...[
+                            const SizedBox(height: 20),
+                            const Text(
+                              'Postup:',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ...instructions.asMap().entries.map((entry) {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      width: 24,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        color: Colors.orange,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          '${entry.key + 1}',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        entry.value.toString(),
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[700],
+                                          height: 1.5,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ],
+                          
+                          const SizedBox(height: 20),
+                          
+                          // Close button
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text(
+                                'Zavřít',
+                                style: TextStyle(fontSize: 16),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<Map<String, dynamic>?> _loadExerciseDetails(String exerciseName) async {
+    try {
+      final allExercises = await DatabaseService.getAllExercises();
+      final normalizedName = exerciseName.toLowerCase().trim();
+      
+      for (var exercise in allExercises) {
+        final name = (exercise['name'] as String).toLowerCase().trim();
+        if (name == normalizedName) {
+          return exercise;
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Chyba při načítání detailu cviku: $e');
+      return null;
+    }
+  }
+
+  String _capitalizeWords(String text) {
+    if (text.isEmpty) return text;
+    return text.split(' ').map((word) {
+      if (word.isEmpty) return word;
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(' ');
+  }
+
   void _completeWorkout(BuildContext context) async {
     try {
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser != null) {
         final exercises = List<Map<String, dynamic>>.from(widget.workoutData['exercises'] ?? []);
         
-        print('🏋️ Ukládám dokončený trénink pro uživatele: ${currentUser.uid}');
-        print('📝 Workout ID: ${widget.workoutId}');
-        print('📝 Workout Name: ${widget.workoutData['workout_name']}');
+        print('Ukládám dokončený trénink pro uživatele: ${currentUser.uid}');
+        print('Workout ID: ${widget.workoutId}');
+        print('Workout Name: ${widget.workoutData['workout_name']}');
         
         await DatabaseService.saveCompletedWorkout(
           workoutId: widget.workoutId,
@@ -489,7 +761,7 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
           }).toList(),
         );
         
-        print('✅ Trénink úspěšně uložen do completed_workouts');
+        print('Trénink úspěšně uložen do completed_workouts');
 
         if (!context.mounted) return;
         

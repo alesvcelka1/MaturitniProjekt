@@ -87,11 +87,11 @@ class _ProgressPageState extends State<ProgressPage> {
     try {
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser != null) {
-        print('🔄 Načítání statistik trenéra pro UID: ${currentUser.uid}');
+        print('Načítání statistik trenéra pro UID: ${currentUser.uid}');
         final stats = await DatabaseService.getTrainerStats(currentUser.uid);
-        print('📊 Načtené statistiky: $stats');
+        print('Načtené statistiky: $stats');
         final topClients = await DatabaseService.getTrainerTopClients(currentUser.uid, limit: 5);
-        print('🏆 Top klienti: ${topClients.length}');
+        print('Top klienti: ${topClients.length}');
         
         if (mounted) {
           setState(() {
@@ -99,7 +99,7 @@ class _ProgressPageState extends State<ProgressPage> {
             _topClients = topClients;
             _isLoadingTrainerStats = false;
           });
-          print('✅ Statistiky trenéra úspěšně nastaveny');
+          print('Statistiky trenéra úspěšně nastaveny');
         }
       } else {
         setState(() {
@@ -107,7 +107,7 @@ class _ProgressPageState extends State<ProgressPage> {
         });
       }
     } catch (e) {
-      print('❌ Chyba při načítání statistik trenéra: $e');
+      print('Chyba při načítání statistik trenéra: $e');
       if (mounted) {
         setState(() {
           _isLoadingTrainerStats = false;
@@ -136,7 +136,7 @@ class _ProgressPageState extends State<ProgressPage> {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('✅ Duplicity vyčištěny'),
+                        content: Text('Duplicity vyčištěny'),
                         backgroundColor: Colors.green,
                       ),
                     );
@@ -425,7 +425,7 @@ class _ProgressPageState extends State<ProgressPage> {
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          print('❌ Chyba v grafu týdenní aktivity: ${snapshot.error}');
+          print('Chyba v grafu týdenní aktivity: ${snapshot.error}');
           return Container(
             height: 200,
             decoration: BoxDecoration(
