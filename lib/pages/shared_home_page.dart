@@ -1864,7 +1864,7 @@ class _ProfilePageState extends State<_ProfilePage> {
       ),
       body: _isLoadingProfile
           ? const Center(child: CircularProgressIndicator(color: Colors.orange))
-          : Padding(
+          : SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [

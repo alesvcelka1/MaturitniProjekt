@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../utils/populate_exercises.dart';
+import '../utils/populate_exercises_from_api.dart';
 
 /// Stránka pro správu databáze cviků z Firebase Firestore
 class ExercisesManagementPage extends StatefulWidget {
@@ -40,7 +40,7 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
       print('Načítám cviky z Firebase Firestore...');
       
       final snapshot = await FirebaseFirestore.instance
-          .collection('exercises_cs')
+          .collection('exercises_api')
           .get()
           .timeout(const Duration(seconds: 15));
       
@@ -98,6 +98,121 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
     });
   }
 
+  Future<void> _showLoadFromAPIDialog() async {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Správa databáze cviků'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text('Vyber akci:'),
+            SizedBox(height: 16),
+            Text(
+              'Pozor: Načítání může trvat několik minut!',
+              style: TextStyle(
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+                color: Colors.orange,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Zrušit'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'delete'),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Smazat vše'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'all'),
+            child: const Text('Načíst vše'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == 'delete') {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Potvrdit smazání'),
+          content: const Text('Opravdu chceš smazat všechny cviky z databáze?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Ne'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Ano, smazat'),
+            ),
+          ],
+        ),
+      );
+      
+      if (confirm == true && mounted) {
+        try {
+          await clearAPIExercises();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Databáze smazána'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+            _loadExercises();
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Chyba: $e'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      }
+    } else if (result == 'all' && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Stahuji cviky z API...'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      
+      try {
+        await populateExercisesFromAPI();
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Cviky úspěšně načteny!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          _loadExercises();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Chyba: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -108,6 +223,11 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.cloud_download),
+            onPressed: _showLoadFromAPIDialog,
+            tooltip: 'Načíst z ExerciseDB API',
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadExercises,
@@ -240,43 +360,6 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
             ),
-            const SizedBox(height: 16),
-            OutlinedButton.icon(
-              onPressed: () async {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Přidávám cviky do databáze...'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-                try {
-                  await populateExercises();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Cviky úspěšně přidány!'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                  // Automaticky obnov data
-                  await _loadExercises();
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Chyba: $e'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              },
-              icon: const Icon(Icons.add_circle),
-              label: const Text('Přidat vzorové cviky'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.blue,
-                side: const BorderSide(color: Colors.blue),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-            ),
-
           ],
         ),
       ),
@@ -308,10 +391,8 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
   }
 
   Widget _buildExerciseCard(Map<String, dynamic> exercise) {
-    final name = exercise['name'] as String;
-    final target = exercise['target'] as String;
-    final bodyPart = exercise['bodyPart'] as String;
-    final equipment = exercise['equipment'] as String;
+    final name = exercise['name']?.toString() ?? 'Neznámý cvik';
+    final bodyPart = exercise['bodyPart']?.toString() ?? 'Nezadáno';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -359,75 +440,16 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 8),
-
-                    // Target muscle
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.my_location,
-                                size: 12,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                _capitalizeWords(target),
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
                     const SizedBox(height: 6),
 
-                    // Body part
-                    Row(
-                      children: [
-                        Icon(Icons.accessibility_new, size: 14, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text(
-                          _capitalizeWords(bodyPart),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-
-                    // Equipment
-                    Row(
-                      children: [
-                        Icon(Icons.fitness_center, size: 14, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            _capitalizeWords(equipment),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[700],
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
+                    // Body part only
+                    Text(
+                      _capitalizeWords(bodyPart),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),

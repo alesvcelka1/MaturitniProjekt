@@ -9,7 +9,7 @@ class DatabaseService {
   /// Reference na kolekce
   static CollectionReference get workouts => _firestore.collection('workouts');
   static CollectionReference get users => _firestore.collection('users');
-  static CollectionReference get exercises => _firestore.collection('exercises_cs');
+  static CollectionReference get exercises => _firestore.collection('exercises_api');
   static CollectionReference get completedWorkouts => _firestore.collection('completed_workouts');
   static CollectionReference get personalRecords => _firestore.collection('personal_records');
   static CollectionReference get scheduledWorkouts => _firestore.collection('scheduled_workouts');
@@ -508,10 +508,10 @@ class DatabaseService {
     }
   }
 
-  /// Načte všechny cviky z exercises_cs
+  /// Načte všechny cviky z exercises_api
   static Future<List<Map<String, dynamic>>> getAllExercises() async {
     try {
-      // Načti všechny cviky z exercises_cs (bez filtru is_public)
+      // Načti všechny cviky z exercises_api (bez filtru is_public)
       final snapshot = await exercises.get();
       
       final allExercises = <Map<String, dynamic>>[];

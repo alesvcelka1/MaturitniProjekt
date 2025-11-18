@@ -594,17 +594,19 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
                       const SizedBox(width: 16),
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: () => _saveWorkout(
-                            context,
-                            workoutId,
-                            workoutNameController.text.trim(),
-                            descriptionController.text.trim(),
-                            exercises,
-                            int.tryParse(durationController.text) ?? 30,
-                            selectedClientIds,
-                            selectedDate,
-                            selectedTime,
-                          ),
+                          onPressed: () async {
+                            await _saveWorkout(
+                              context,
+                              workoutId,
+                              workoutNameController.text.trim(),
+                              descriptionController.text.trim(),
+                              exercises,
+                              int.tryParse(durationController.text) ?? 30,
+                              selectedClientIds,
+                              selectedDate,
+                              selectedTime,
+                            );
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.orange,
                             foregroundColor: Colors.white,
@@ -661,29 +663,59 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
                     ],
                   ),
                 ),
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    final selectedExercise = await showDialog<Map<String, dynamic>>(
-                      context: context,
-                      builder: (context) => const ExerciseSelectorDialog(),
-                    );
-                    
-                    if (selectedExercise != null) {
-                      setSheetState(() {
-                        exercise['name'] = selectedExercise['name'];
-                        exercise['exercise_id'] = selectedExercise['id'];
-                        exercise['video_url'] = selectedExercise['video_url'];
-                      });
-                      
-                      onUpdate(exercise);
-                    }
-                  },
-                  icon: const Icon(Icons.search, size: 18),
-                  label: const Text('Vybrat cvik', style: TextStyle(fontSize: 12)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    foregroundColor: Colors.white,
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        final selectedExercise = await showDialog<Map<String, dynamic>>(
+                          context: context,
+                          builder: (context) => const ExerciseSelectorDialog(),
+                        );
+                        
+                        if (selectedExercise != null) {
+                          setSheetState(() {
+                            exercise['name'] = selectedExercise['name'];
+                            exercise['exercise_id'] = selectedExercise['id'];
+                            exercise['video_url'] = selectedExercise['video_url'];
+                          });
+                          
+                          onUpdate(exercise);
+                        }
+                      },
+                      icon: const Icon(Icons.search, size: 18),
+                      label: const Text('Z databáze', style: TextStyle(fontSize: 12)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        _showCustomExerciseDialog(
+                          context,
+                          exercise,
+                          (customName) {
+                            setSheetState(() {
+                              exercise['name'] = customName;
+                              exercise['exercise_id'] = null; // Vlastní cvik nemá ID z databáze
+                              exercise['video_url'] = null;
+                            });
+                            onUpdate(exercise);
+                          },
+                        );
+                      },
+                      icon: const Icon(Icons.edit, size: 18),
+                      label: const Text('Vlastní', style: TextStyle(fontSize: 12)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.orange,
+                        side: const BorderSide(color: Colors.orange),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(width: 8),
                 IconButton(
@@ -883,7 +915,7 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
       }
 
       // Pokud je vybrané datum, naplánuj trénink pro každého klienta
-      if (scheduledDate != null && createdWorkoutId != null && clientIds.isNotEmpty) {
+      if (scheduledDate != null && clientIds.isNotEmpty) {
         DateTime finalDateTime = scheduledDate;
         if (scheduledTime != null) {
           finalDateTime = DateTime(
@@ -924,6 +956,65 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
         );
       }
     }
+  }
+
+  void _showCustomExerciseDialog(
+    BuildContext context,
+    Map<String, dynamic> exercise,
+    Function(String) onSave,
+  ) {
+    final controller = TextEditingController(text: exercise['name'] ?? '');
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Vytvořit vlastní cvik'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'Název cviku',
+                hintText: 'např. Bench press, Dřep...',
+                border: OutlineInputBorder(),
+              ),
+              textCapitalization: TextCapitalization.sentences,
+              autofocus: true,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Vlastní cvik nebude propojený s databází.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Zrušit'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final customName = controller.text.trim();
+              if (customName.isNotEmpty) {
+                onSave(customName);
+                Navigator.of(dialogContext).pop();
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Uložit'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showWorkoutDetailDialog(BuildContext context, String workoutId, Map<String, dynamic> data) {

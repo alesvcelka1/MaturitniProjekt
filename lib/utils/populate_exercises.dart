@@ -13,7 +13,7 @@ Future<void> populateExercises() async {
   print('Přihlášený uživatel: ${currentUser.email}');
   
   final firestore = FirebaseFirestore.instance;
-  final collection = firestore.collection('exercises_cs');
+  final collection = firestore.collection('exercises_api');
 
   // Základní cviky v češtině
   final exercises = [
