@@ -69,7 +69,7 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
     final estimatedDuration = widget.workoutData['estimated_duration'] ?? 0;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(workoutName),
         backgroundColor: Colors.orange,

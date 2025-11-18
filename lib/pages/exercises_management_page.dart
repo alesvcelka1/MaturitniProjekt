@@ -216,7 +216,7 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Databáze cviků'),
         backgroundColor: Colors.orange,

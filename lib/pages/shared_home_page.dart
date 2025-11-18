@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -17,6 +18,7 @@ import 'chat_page.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
 import '../services/unread_messages_service.dart';
+import '../services/theme_service.dart';
 
 /// Unified home page for both trainers and clients
 /// Dynamically shows features based on user role from Firestore
@@ -105,7 +107,7 @@ class _SharedHomePageState extends State<SharedHomePage> {
       body: pages[_selectedIndex],
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).bottomNavigationBarTheme.backgroundColor,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
@@ -457,7 +459,7 @@ class _DashboardPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -524,7 +526,7 @@ class _DashboardPage extends StatelessWidget {
                               'Sdílej svůj QR kód s klienty',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey[600],
+                                color: Theme.of(context).textTheme.bodySmall?.color,
                               ),
                             ),
                           ],
@@ -581,7 +583,7 @@ class _DashboardPage extends StatelessWidget {
                                 clientEmail,
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.grey[600],
+                                  color: Theme.of(context).textTheme.bodySmall?.color,
                                 ),
                               ),
                               if (connectedAt != null) ...[
@@ -705,7 +707,7 @@ class _DashboardPage extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -786,7 +788,7 @@ class _DashboardPage extends StatelessWidget {
                               'Dnes máš volno!',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey[600],
+                                color: Theme.of(context).textTheme.bodySmall?.color,
                               ),
                             ),
                           ],
@@ -1074,7 +1076,7 @@ class _DashboardPage extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
@@ -1144,7 +1146,7 @@ class _DashboardPage extends StatelessWidget {
                           child: CircularProgressIndicator(
                             value: progress.clamp(0.0, 1.0),
                             strokeWidth: 10,
-                            backgroundColor: Colors.grey[200],
+                            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
                             valueColor: AlwaysStoppedAnimation<Color>(
                               progress >= 1 ? Colors.green : Colors.orange,
                             ),
@@ -1165,7 +1167,7 @@ class _DashboardPage extends StatelessWidget {
                               'z $targetWorkouts',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey[600],
+                                color: Theme.of(context).textTheme.bodySmall?.color,
                               ),
                             ),
                           ],
@@ -1192,7 +1194,7 @@ class _DashboardPage extends StatelessWidget {
                               : 'Ještě ${targetWorkouts - totalWorkouts} ${_getWorkoutWord(targetWorkouts - totalWorkouts)} do cíle',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey[700],
+                            color: Theme.of(context).textTheme.bodyMedium?.color,
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -1400,7 +1402,7 @@ class _DashboardPage extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -1437,7 +1439,7 @@ class _DashboardPage extends StatelessWidget {
                     subtitle,
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey[600],
+                      color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7),
                     ),
                   ),
                 ],
@@ -1849,13 +1851,68 @@ class _ProfilePageState extends State<_ProfilePage> {
     }
   }
 
+  Future<void> _showThemeDialog() async {
+    final themeService = Provider.of<ThemeService>(context, listen: false);
+    
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Vzhled aplikace'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<ThemeMode>(
+              title: const Text('Systémové nastavení'),
+              subtitle: const Text('Automaticky podle systému'),
+              value: ThemeMode.system,
+              groupValue: themeService.themeMode,
+              activeColor: Colors.orange,
+              onChanged: (value) {
+                themeService.setSystemMode();
+                Navigator.of(dialogContext).pop();
+              },
+            ),
+            RadioListTile<ThemeMode>(
+              title: const Text('Světlý motiv'),
+              subtitle: const Text('Vždy světlý vzhled'),
+              value: ThemeMode.light,
+              groupValue: themeService.themeMode,
+              activeColor: Colors.orange,
+              onChanged: (value) {
+                themeService.setLightMode();
+                Navigator.of(dialogContext).pop();
+              },
+            ),
+            RadioListTile<ThemeMode>(
+              title: const Text('Tmavý motiv'),
+              subtitle: const Text('Vždy tmavý vzhled'),
+              value: ThemeMode.dark,
+              groupValue: themeService.themeMode,
+              activeColor: Colors.orange,
+              onChanged: (value) {
+                themeService.setDarkMode();
+                Navigator.of(dialogContext).pop();
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Zavřít'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     final authService = AuthService();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Profil'),
         backgroundColor: Colors.orange,
@@ -1872,7 +1929,7 @@ class _ProfilePageState extends State<_ProfilePage> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
@@ -1939,7 +1996,7 @@ class _ProfilePageState extends State<_ProfilePage> {
                         const SizedBox(height: 4),
                         Text(
                           user?.email ?? '',
-                          style: TextStyle(color: Colors.grey[600]),
+                          style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7)),
                         ),
                         if (widget.userRole != null) ...[
                           const SizedBox(height: 8),
@@ -1969,7 +2026,7 @@ class _ProfilePageState extends State<_ProfilePage> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
@@ -1994,6 +2051,28 @@ class _ProfilePageState extends State<_ProfilePage> {
                           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                           onTap: _showEditNicknameDialog,
                         ),
+                        const Divider(),
+                        ListTile(
+                          leading: Icon(
+                            Provider.of<ThemeService>(context).isDarkMode
+                                ? Icons.dark_mode
+                                : Provider.of<ThemeService>(context).isSystemMode
+                                    ? Icons.brightness_auto
+                                    : Icons.light_mode,
+                            color: Colors.orange,
+                          ),
+                          title: const Text('Vzhled aplikace'),
+                          subtitle: Text(
+                            Provider.of<ThemeService>(context).isSystemMode
+                                ? 'Systémové nastavení'
+                                : Provider.of<ThemeService>(context).isDarkMode
+                                    ? 'Tmavý motiv'
+                                    : 'Světlý motiv',
+                            style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodySmall?.color),
+                          ),
+                          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                          onTap: () => _showThemeDialog(),
+                        ),
                         // QR skenování pro klienty
                         if (widget.userRole == 'client') ...[
                           const Divider(),
@@ -2007,7 +2086,7 @@ class _ProfilePageState extends State<_ProfilePage> {
                                 : 'Změnit trenéra'),
                             subtitle: _trainerName != null 
                                 ? Text('Trenér: $_trainerName', 
-                                    style: TextStyle(fontSize: 12, color: Colors.grey[600]))
+                                    style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodySmall?.color))
                                 : null,
                             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                             onTap: () async {
@@ -2029,7 +2108,7 @@ class _ProfilePageState extends State<_ProfilePage> {
                               title: const Text('Napsat trenérovi'),
                               subtitle: _trainerName != null 
                                   ? Text('Chat s $_trainerName',
-                                      style: TextStyle(fontSize: 12, color: Colors.grey[600]))
+                                      style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodySmall?.color))
                                   : null,
                               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                               onTap: () {

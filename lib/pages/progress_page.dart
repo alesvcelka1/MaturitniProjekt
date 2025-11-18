@@ -119,7 +119,7 @@ class _ProgressPageState extends State<ProgressPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Pokrok'),
         backgroundColor: Colors.orange,
@@ -252,7 +252,7 @@ class _ProgressPageState extends State<ProgressPage> {
                 icon: const Icon(Icons.add),
                 label: const Text('Přidat první PR'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).colorScheme.surface,
                   foregroundColor: Colors.deepPurple,
                 ),
               ),
@@ -339,7 +339,7 @@ class _ProgressPageState extends State<ProgressPage> {
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -364,7 +364,7 @@ class _ProgressPageState extends State<ProgressPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -429,7 +429,7 @@ class _ProgressPageState extends State<ProgressPage> {
           return Container(
             height: 200,
             decoration: BoxDecoration(
-              color: Colors.grey[100],
+              color: Theme.of(context).colorScheme.surface.withOpacity(0.5),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
@@ -442,7 +442,7 @@ class _ProgressPageState extends State<ProgressPage> {
           return Container(
             height: 200,
             decoration: BoxDecoration(
-              color: Colors.grey[100],
+              color: Theme.of(context).colorScheme.surface.withOpacity(0.5),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Center(
@@ -483,7 +483,7 @@ class _ProgressPageState extends State<ProgressPage> {
           height: 200,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.grey[50],
+            color: Theme.of(context).colorScheme.surface.withOpacity(0.3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -498,7 +498,7 @@ class _ProgressPageState extends State<ProgressPage> {
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
-                      color: Colors.grey[800],
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
                     ),
                   ),
                 ],
@@ -543,7 +543,7 @@ class _ProgressPageState extends State<ProgressPage> {
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w500,
-                                    color: Colors.grey[600],
+                                    color: Theme.of(context).textTheme.bodySmall?.color,
                                   ),
                                 ),
                               );
@@ -564,7 +564,7 @@ class _ProgressPageState extends State<ProgressPage> {
                               value.toInt().toString(),
                               style: TextStyle(
                                 fontSize: 10,
-                                color: Colors.grey[600],
+                                color: Theme.of(context).textTheme.bodySmall?.color,
                               ),
                             );
                           },
@@ -583,7 +583,7 @@ class _ProgressPageState extends State<ProgressPage> {
                       horizontalInterval: 1,
                       getDrawingHorizontalLine: (value) {
                         return FlLine(
-                          color: Colors.grey[300],
+                          color: Theme.of(context).dividerColor.withOpacity(0.3),
                           strokeWidth: 1,
                         );
                       },
@@ -994,7 +994,7 @@ class _ProgressPageState extends State<ProgressPage> {
         width: double.infinity,
         padding: const EdgeInsets.all(40),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -1015,7 +1015,7 @@ class _ProgressPageState extends State<ProgressPage> {
         width: double.infinity,
         padding: const EdgeInsets.all(40),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -1033,7 +1033,7 @@ class _ProgressPageState extends State<ProgressPage> {
               'Zatím nemáš žádné klienty',
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.grey[600],
+                color: Theme.of(context).textTheme.bodyMedium?.color,
               ),
             ),
             const SizedBox(height: 8),
@@ -1041,7 +1041,7 @@ class _ProgressPageState extends State<ProgressPage> {
               'Přidej klienty a sleduj jejich pokrok',
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey[400],
+                color: Theme.of(context).textTheme.bodySmall?.color,
               ),
             ),
           ],
@@ -1053,7 +1053,7 @@ class _ProgressPageState extends State<ProgressPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
