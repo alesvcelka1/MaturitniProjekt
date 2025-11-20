@@ -10,7 +10,7 @@ class UserRoles {
 class FirestoreCollections {
   static const String workouts = 'workouts';
   static const String users = 'users';
-  static const String exercises = 'exercises_api';
+  // Cviky jsou nyní spravovány lokálně (data/exercises_data.dart)
   static const String completedWorkouts = 'completed_workouts';
   static const String personalRecords = 'personal_records';
   static const String scheduledWorkouts = 'scheduled_workouts';

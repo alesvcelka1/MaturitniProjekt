@@ -545,17 +545,41 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
               }
               
               final exerciseDetail = snapshot.data!;
-              final target = exerciseDetail['target'] as String? ?? '';
               final bodyPart = exerciseDetail['bodyPart'] as String? ?? '';
-              final equipment = exerciseDetail['equipment'] as String? ?? '';
-              final secondaryMuscles = (exerciseDetail['secondaryMuscles'] as List?)?.cast<String>() ?? [];
-              final instructions = (exerciseDetail['instructions'] as List?)?.cast<String>() ?? [];
+              final gifPath = exerciseDetail['gifPath'] as String? ?? '';
               
               return SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // GIF náhled
+                    if (gifPath.isNotEmpty)
+                      ClipRRect(
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20),
+                        ),
+                        child: Image.asset(
+                          gifPath,
+                          height: 250,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              height: 250,
+                              color: Colors.grey[300],
+                              child: const Center(
+                                child: Icon(
+                                  Icons.fitness_center,
+                                  size: 80,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    
                     Padding(
                       padding: const EdgeInsets.all(20),
                       child: Column(
@@ -571,113 +595,13 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                           ),
                           const SizedBox(height: 16),
                           
-                          // Info chips
-                          if (target.isNotEmpty || bodyPart.isNotEmpty || equipment.isNotEmpty)
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                if (target.isNotEmpty)
-                                  _buildDetailChip(
-                                    icon: Icons.my_location,
-                                    label: 'Cíl: ${_capitalizeWords(target)}',
-                                    color: Colors.orange,
-                                  ),
-                                if (bodyPart.isNotEmpty)
-                                  _buildDetailChip(
-                                    icon: Icons.accessibility_new,
-                                    label: _capitalizeWords(bodyPart),
-                                    color: Colors.blue,
-                                  ),
-                                if (equipment.isNotEmpty)
-                                  _buildDetailChip(
-                                    icon: Icons.fitness_center,
-                                    label: _capitalizeWords(equipment),
-                                    color: Colors.green,
-                                  ),
-                              ],
+                          // Info chip - pouze bodyPart
+                          if (bodyPart.isNotEmpty)
+                            _buildDetailChip(
+                              icon: Icons.accessibility_new,
+                              label: _capitalizeWords(bodyPart),
+                              color: Colors.blue,
                             ),
-                          
-                          // Secondary muscles
-                          if (secondaryMuscles.isNotEmpty) ...[
-                            const SizedBox(height: 20),
-                            const Text(
-                              'Sekundární svaly:',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: secondaryMuscles
-                                  .map(
-                                    (muscle) => Chip(
-                                      label: Text(
-                                        _capitalizeWords(muscle.toString()),
-                                        style: const TextStyle(fontSize: 12),
-                                      ),
-                                      backgroundColor: Colors.grey[200],
-                                      padding: EdgeInsets.zero,
-                                    ),
-                                  )
-                                  .toList(),
-                            ),
-                          ],
-                          
-                          // Instructions
-                          if (instructions.isNotEmpty) ...[
-                            const SizedBox(height: 20),
-                            const Text(
-                              'Postup:',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            ...instructions.asMap().entries.map((entry) {
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Container(
-                                      width: 24,
-                                      height: 24,
-                                      decoration: BoxDecoration(
-                                        color: Colors.orange,
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          '${entry.key + 1}',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        entry.value.toString(),
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey[700],
-                                          height: 1.5,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }),
-                          ],
                           
                           const SizedBox(height: 20),
                           

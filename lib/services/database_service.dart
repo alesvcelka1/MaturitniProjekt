@@ -2,16 +2,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/constants.dart';
 import '../core/utils/logger.dart';
+import '../data/exercises_data.dart' as exercises_data;
 
 /// Service pro správu databázových operací
 class DatabaseService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  static final FirebaseAuth _auth = FirebaseAuth.instance;
 
   /// Reference na kolekce
   static CollectionReference get workouts => _firestore.collection('workouts');
   static CollectionReference get users => _firestore.collection('users');
-  static CollectionReference get exercises => _firestore.collection('exercises_api');
   static CollectionReference get completedWorkouts => _firestore.collection('completed_workouts');
   static CollectionReference get personalRecords => _firestore.collection('personal_records');
   static CollectionReference get scheduledWorkouts => _firestore.collection('scheduled_workouts');
@@ -379,155 +378,47 @@ class DatabaseService {
 
   // ========== EXERCISE DATABASE ==========
 
-  /// Rozšířená struktura cviku v databázi:
-  /// {
-  ///   'name': String,                    // název cviku
-  ///   'description': String,             // popis cviku
-  ///   'muscle_groups': List<String>,     // cílové svalové skupiny ['hrudník', 'triceps']
-  ///   'difficulty': String,              // 'začátečník', 'středně pokročilý', 'pokročilý'
-  ///   'equipment': List<String>,         // potřebné vybavení ['činky', 'lavice']
-  ///   'video_url': String?,              // URL na instruktážní video (YouTube, Vimeo, etc.)
-  ///   'thumbnail_url': String?,          // URL náhledového obrázku
-  ///   'instructions': List<String>,      // krok po kroku instrukce
-  ///   'tips': List<String>,              // tipy a varování
-  ///   'created_by': String,              // ID uživatele který cvik vytvořil
-  ///   'is_public': bool,                 // zda je cvik veřejný (viditelný pro všechny)
-  ///   'created_at': Timestamp,
-  ///   'updated_at': Timestamp
-  /// }
+  /// Cviky jsou nyní spravovány lokálně v souboru data/exercises_data.dart
+  /// Pro přidání nového cviku je třeba editovat tento soubor a přidat GIF do assets/gifs/
 
-  /// Vytvoří nebo aktualizuje cvik v databázi
-  static Future<String> saveExercise({
-    String? exerciseId,
-    required String name,
-    String? description,
-    List<String>? muscleGroups,
-    String? difficulty,
-    List<String>? equipment,
-    String? videoUrl,
-    String? thumbnailUrl,
-    List<String>? instructions,
-    List<String>? tips,
-    bool isPublic = true,
-  }) async {
-    try {
-      final currentUser = _auth.currentUser;
-      if (currentUser == null) {
-        throw Exception('Uživatel není přihlášen');
-      }
-
-      final exerciseData = <String, dynamic>{
-        'name': name.trim(),
-        'created_by': currentUser.uid,
-        'is_public': isPublic,
-        'updated_at': FieldValue.serverTimestamp(),
-      };
-
-      // Only add optional fields if they are provided
-      if (description != null && description.trim().isNotEmpty) {
-        exerciseData['description'] = description.trim();
-      }
-      if (muscleGroups != null && muscleGroups.isNotEmpty) {
-        exerciseData['muscle_groups'] = muscleGroups;
-      }
-      if (difficulty != null && difficulty.trim().isNotEmpty) {
-        exerciseData['difficulty'] = difficulty;
-      }
-      if (equipment != null && equipment.isNotEmpty) {
-        exerciseData['equipment'] = equipment;
-      }
-      if (videoUrl != null && videoUrl.trim().isNotEmpty) {
-        exerciseData['video_url'] = videoUrl;
-      }
-      if (thumbnailUrl != null && thumbnailUrl.trim().isNotEmpty) {
-        exerciseData['thumbnail_url'] = thumbnailUrl;
-      }
-      if (instructions != null && instructions.isNotEmpty) {
-        exerciseData['instructions'] = instructions;
-      }
-      if (tips != null && tips.isNotEmpty) {
-        exerciseData['tips'] = tips;
-      }
-
-      if (exerciseId != null) {
-        // Aktualizace existujícího cviku
-        await exercises.doc(exerciseId).update(exerciseData);
-        
-        return exerciseId;
-      } else {
-        // Vytvoření nového cviku
-        exerciseData['created_at'] = FieldValue.serverTimestamp();
-        final doc = await exercises.add(exerciseData);
-        
-        return doc.id;
-      }
-    } catch (e) {
-      
-      rethrow;
-    }
-  }
-
-  /// Načte všechny cviky z exercises_api
+  /// Načte všechny cviky z lokální databáze
   static Future<List<Map<String, dynamic>>> getAllExercises() async {
     try {
-      // Načti všechny cviky z exercises_api (bez filtru is_public)
-      final snapshot = await exercises.get();
+      // Načti lokální cviky
+      final allExercises = exercises_data.getAllExercises();
       
-      final allExercises = <Map<String, dynamic>>[];
-      
-      for (final doc in snapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        data['id'] = doc.id;
-        allExercises.add(data);
-      }
-      
-      // Seřaď abecedně podle názvu
-      allExercises.sort((a, b) => 
-        (a['name'] as String).compareTo(b['name'] as String));
+      AppLogger.info('Načteno ${allExercises.length} cviků z lokální databáze');
       
       return allExercises;
     } catch (e) {
-      
+      AppLogger.error('Chyba při načítání cviků', e);
       return [];
     }
   }
 
-  /// Filtruje cviky podle svalových skupin
+  /// Filtruje cviky podle partie těla
   static Future<Map<String, dynamic>?> getExerciseById(String exerciseId) async {
     try {
-      final doc = await exercises.doc(exerciseId).get();
-      if (!doc.exists) return null;
-      
-      final data = doc.data() as Map<String, dynamic>;
-      data['id'] = doc.id;
-      return data;
+      final exercise = exercises_data.getExerciseById(exerciseId);
+      return exercise;
     } catch (e) {
-      
+      AppLogger.error('Chyba při načítání cviku $exerciseId', e);
       return null;
     }
   }
 
-  /// Smaže cvik (pouze pokud ho vytvořil aktuální uživatel)
-  static Future<bool> deleteExercise(String exerciseId) async {
+  /// Získá seznam všech partií těla
+  static Future<List<String>> getBodyParts() async {
+    return exercises_data.getBodyParts();
+  }
+
+  /// Filtruje cviky podle partie těla
+  static Future<List<Map<String, dynamic>>> getExercisesByBodyPart(String bodyPart) async {
     try {
-      final currentUser = _auth.currentUser;
-      if (currentUser == null) return false;
-      
-      final doc = await exercises.doc(exerciseId).get();
-      if (!doc.exists) return false;
-      
-      final data = doc.data() as Map<String, dynamic>;
-      if (data['created_by'] != currentUser.uid) {
-        
-        return false;
-      }
-      
-      await exercises.doc(exerciseId).delete();
-      
-      return true;
+      return exercises_data.getExercisesByBodyPart(bodyPart);
     } catch (e) {
-      
-      return false;
+      AppLogger.error('Chyba při filtrování cviků podle $bodyPart', e);
+      return [];
     }
   }
 

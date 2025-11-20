@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../utils/populate_exercises_from_api.dart';
+import '../services/database_service.dart';
 import '../core/utils/logger.dart';
 
 /// Stránka pro správu databáze cviků z Firebase Firestore
@@ -38,29 +37,14 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
     });
     
     try {
-      AppLogger.info('Načítám cviky z Firebase Firestore');
+      AppLogger.info('Načítám cviky z lokální databáze');
       
-      final snapshot = await FirebaseFirestore.instance
-          .collection('exercises_api')
-          .get()
-          .timeout(const Duration(seconds: 15));
+      // Načti lokální cviky
+      final exercises = await DatabaseService.getAllExercises();
       
-      if (snapshot.docs.isEmpty) {
+      if (exercises.isEmpty) {
         throw Exception('V databázi nejsou žádné cviky');
       }
-      
-      final exercises = snapshot.docs.map((doc) {
-        final data = doc.data();
-        return {
-          'id': data['id'] ?? doc.id,
-          'name': data['name'] ?? 'Bez názvu',
-          'bodyPart': data['bodyPart'] ?? '',
-          'target': data['target'] ?? '',
-          'equipment': data['equipment'] ?? '',
-          'secondaryMuscles': data['secondaryMuscles'] ?? [],
-          'instructions': data['instructions'] ?? [],
-        };
-      }).toList();
       
       setState(() {
         _exercises = exercises;
@@ -68,11 +52,11 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
         _isLoading = false;
       });
       
-      AppLogger.success('Načteno ${_exercises.length} cviků z Firebase');
+      AppLogger.success('Načteno ${_exercises.length} cviků');
     } catch (e) {
-      AppLogger.error('Chyba při načítání z Firebase', e);
+      AppLogger.error('Chyba při načítání cviků', e);
       setState(() {
-        _errorMessage = 'Nepodařilo se načíst cviky z databáze.\n$e';
+        _errorMessage = 'Nepodařilo se načíst cviky.\n$e';
         _isLoading = false;
       });
     }
@@ -86,139 +70,12 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
       } else {
         _filteredExercises = _exercises.where((exercise) {
           final name = (exercise['name'] as String).toLowerCase();
-          final target = (exercise['target'] as String).toLowerCase();
           final bodyPart = (exercise['bodyPart'] as String).toLowerCase();
-          final equipment = (exercise['equipment'] as String).toLowerCase();
 
-          return name.contains(query) ||
-              target.contains(query) ||
-              bodyPart.contains(query) ||
-              equipment.contains(query);
+          return name.contains(query) || bodyPart.contains(query);
         }).toList();
       }
     });
-  }
-
-  Future<void> _showLoadFromAPIDialog() async {
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Správa databáze cviků'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Text('Vyber akci:'),
-            SizedBox(height: 16),
-            Text(
-              'Pozor: Načítání může trvat několik minut!',
-              style: TextStyle(
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-                color: Colors.orange,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Zrušit'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, 'delete'),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Smazat vše'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, 'all'),
-            child: const Text('Načíst vše'),
-          ),
-        ],
-      ),
-    );
-
-    if (result == 'delete') {
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Potvrdit smazání'),
-          content: const Text('Opravdu chceš smazat všechny cviky z databáze?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Ne'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Ano, smazat'),
-            ),
-          ],
-        ),
-      );
-      
-      if (confirm == true && mounted) {
-        try {
-          // Smazání všech cviků z databáze
-          final firestore = FirebaseFirestore.instance;
-          final snapshot = await firestore.collection('exercises_api').get();
-          
-          for (var doc in snapshot.docs) {
-            await doc.reference.delete();
-          }
-          
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Databáze smazána'),
-                backgroundColor: Colors.orange,
-              ),
-            );
-            _loadExercises();
-          }
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Chyba: $e'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        }
-      }
-    } else if (result == 'all' && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Stahuji cviky z API...'),
-          duration: Duration(seconds: 3),
-        ),
-      );
-      
-      try {
-        await populateExercisesFromAPI();
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Cviky úspěšně načteny!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          _loadExercises();
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Chyba: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    }
   }
 
   @override
@@ -231,11 +88,6 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.cloud_download),
-            onPressed: _showLoadFromAPIDialog,
-            tooltip: 'Načíst z ExerciseDB API',
-          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadExercises,
@@ -485,11 +337,8 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
 
   void _showExerciseDetailDialog(Map<String, dynamic> exercise) {
     final name = exercise['name'] as String;
-    final target = exercise['target'] as String;
     final bodyPart = exercise['bodyPart'] as String;
-    final equipment = exercise['equipment'] as String;
-    final secondaryMuscles = (exercise['secondaryMuscles'] as List).cast<String>();
-    final instructions = (exercise['instructions'] as List).cast<String>();
+    final gifPath = exercise['gifPath'] as String;
 
     showDialog(
       context: context,
@@ -504,6 +353,32 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // GIF náhled
+                ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                  child: Image.asset(
+                    gifPath,
+                    height: 250,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        height: 250,
+                        color: Colors.grey[300],
+                        child: const Center(
+                          child: Icon(
+                            Icons.fitness_center,
+                            size: 80,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
                 // Content
                 Padding(
                   padding: const EdgeInsets.all(20),
@@ -521,109 +396,12 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Info chips
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          _buildInfoChip(
-                            Icons.my_location,
-                            'Cíl: ${_capitalizeWords(target)}',
-                            Colors.orange,
-                          ),
-                          _buildInfoChip(
-                            Icons.accessibility_new,
-                            _capitalizeWords(bodyPart),
-                            Colors.blue,
-                          ),
-                          _buildInfoChip(
-                            Icons.fitness_center,
-                            _capitalizeWords(equipment),
-                            Colors.green,
-                          ),
-                        ],
+                      // Body part chip
+                      _buildInfoChip(
+                        Icons.accessibility_new,
+                        _capitalizeWords(bodyPart),
+                        Colors.blue,
                       ),
-
-                      // Secondary muscles
-                      if (secondaryMuscles.isNotEmpty) ...[
-                        const SizedBox(height: 20),
-                        const Text(
-                          'Sekundární svaly:',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: secondaryMuscles
-                              .map(
-                                (muscle) => Chip(
-                                  label: Text(
-                                    _capitalizeWords(muscle.toString()),
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                  backgroundColor: Colors.grey[200],
-                                  padding: EdgeInsets.zero,
-                                ),
-                              )
-                              .toList(),
-                        ),
-                      ],
-
-                      // Instructions
-                      if (instructions.isNotEmpty) ...[
-                        const SizedBox(height: 20),
-                        const Text(
-                          'Postup:',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        ...instructions.asMap().entries.map((entry) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 24,
-                                  height: 24,
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      '${entry.key + 1}',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    entry.value.toString(),
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey[700],
-                                      height: 1.5,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }),
-                      ],
 
                       const SizedBox(height: 20),
 
