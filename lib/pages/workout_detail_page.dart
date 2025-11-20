@@ -168,7 +168,9 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
         ? Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey[900]
+                  : Colors.white,
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.1),
@@ -200,7 +202,7 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
+                  Text(
                     'Trénink dokončen',
                     style: TextStyle(
                       color: Colors.green,

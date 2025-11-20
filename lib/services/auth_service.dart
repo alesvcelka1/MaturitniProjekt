@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
+import '../core/utils/logger.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -23,7 +24,7 @@ class AuthService {
         'createdAt': FieldValue.serverTimestamp(),
         'role': 'client', // DŮLEŽITÉ: defaultní role
       }, SetOptions(merge: true)).catchError((error) {
-        print('Firestore chyba (ale registrace pokračuje): $error');
+        AppLogger.warning('Firestore chyba při registraci (ale registrace pokračuje)', error);
       });
 
       // 3) Odhlásit uživatele po registraci
@@ -57,44 +58,42 @@ class AuthService {
   /// Přihlášení přes Google
   Future<String?> signInWithGoogle() async {
     try {
-      print('Spouštím Google Sign-In...');
+      AppLogger.debug('Spouštím Google Sign-In');
       UserCredential userCred;
 
       if (kIsWeb) {
         // Web: použít popup flow
-        print('Web platform detected');
+        AppLogger.debug('Web platform detected');
         final GoogleAuthProvider provider = GoogleAuthProvider();
         provider.addScope('email');
         userCred = await _auth.signInWithPopup(provider);
       } else {
         // Mobil (Android/iOS): GoogleSignIn plugin
-        print('Mobile platform detected');
+        AppLogger.debug('Mobile platform detected');
         final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
         if (googleUser == null) {
-          print('Uživatel zrušil Google přihlášení');
+          AppLogger.info('Uživatel zrušil Google přihlášení');
           return 'Přihlášení zrušeno.';
         }
-        print('Google účet vybrán: ${googleUser.email}');
+        AppLogger.debug('Google účet vybrán: ${googleUser.email}');
         
         final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-        print('Získávám autentifikační tokeny...');
         
         final OAuthCredential credential = GoogleAuthProvider.credential(
           accessToken: googleAuth.accessToken,
           idToken: googleAuth.idToken,
         );
-        print('Přihlašuji se do Firebase...');
         userCred = await _auth.signInWithCredential(credential);
       }
 
-      print('Firebase přihlášení úspěšné! UID: ${userCred.user!.uid}');
+      AppLogger.success('Firebase přihlášení úspěšné! UID: ${userCred.user!.uid}');
 
       // Vytvoření nebo aktualizace dokumentu v Firestore (pokud neexistuje)
       final String uid = userCred.user!.uid;
       final DocumentReference<Map<String, dynamic>> userDoc = _firestore.collection('users').doc(uid);
       final docSnap = await userDoc.get();
       if (!docSnap.exists) {
-        print('Vytvářím nový uživatelský dokument...');
+        AppLogger.debug('Vytvářím nový uživatelský dokument');
         await userDoc.set({
           'email': userCred.user!.email,
           'createdAt': FieldValue.serverTimestamp(),
@@ -102,21 +101,21 @@ class AuthService {
           'role': 'client', // DŮLEŽITÉ: defaultní role
         }, SetOptions(merge: true));
       } else {
-        print('Uživatelský dokument už existuje');
+        AppLogger.debug('Uživatelský dokument už existuje');
       }
 
       return null; // úspěch
     } on FirebaseAuthException catch (e) {
-      print('Firebase Auth Exception: ${e.code} - ${e.message}');
+      AppLogger.error('Firebase Auth Exception: ${e.code}', e);
       return _getLocalizedErrorMessage(e.code);
     } on PlatformException catch (e) {
       // Typicky: nepodporovaná platforma nebo špatná konfigurace Sign-In
       final code = e.code.toString();
       final message = e.message ?? '';
-      print('Platform Exception: $code - $message');
+      AppLogger.error('Platform Exception: $code', e);
       return 'Platformní chyba: $code ${message.isNotEmpty ? '- ' + message : ''}';
     } catch (e) {
-      print('Neočekávaná chyba: $e');
+      AppLogger.error('Neočekávaná chyba při Google Sign-In', e);
       return 'Neočekávaná chyba: ${e.toString()}';
     }
   }

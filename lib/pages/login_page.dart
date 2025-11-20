@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'register_page.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -51,14 +50,10 @@ class _LoginPageState extends State<LoginPage> {
       _errorMessage = null;
     });
 
-    print('🎮 Google přihlášení...');
     final error = await _authService.signInWithGoogle();
     
     if (error != null) {
-      print('❌ Google přihlášení chyba: $error');
       setState(() => _errorMessage = error);
-    } else {
-      print('✅ Google přihlášení úspěšné!');
     }
     
     if (mounted) {
@@ -68,19 +63,24 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          // Background gradient
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.deepOrange, Colors.orange],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+    return Theme(
+      data: ThemeData.light().copyWith(
+        primaryColor: Colors.orange,
+        scaffoldBackgroundColor: Colors.white,
+      ),
+      child: Scaffold(
+        body: Stack(
+          children: [
+            // Background gradient
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.deepOrange, Colors.orange],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
               ),
             ),
-          ),
 
           // Content
           Center(
@@ -109,7 +109,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         const SizedBox(height: 8),
                         const Text(
-                          "Přihlas se pro pokračování",
+                          "Pokračujte přihlášením",
                           style: TextStyle(fontSize: 16, color: Colors.grey),
                         ),
                         const SizedBox(height: 32),
@@ -218,7 +218,7 @@ class _LoginPageState extends State<LoginPage> {
                         // Google přihlášení
                         SizedBox(
                           width: double.infinity,
-                          child: ElevatedButton.icon(
+                          child: ElevatedButton(
                             onPressed: _isLoading ? null : _loginWithGoogle,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.white,
@@ -229,14 +229,40 @@ class _LoginPageState extends State<LoginPage> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            icon: const FaIcon(
-                              FontAwesomeIcons.google,
-                              color: Colors.red,
-                              size: 20,
-                            ),
-                            label: const Text(
-                              "Přihlásit se přes Google",
-                              style: TextStyle(fontSize: 18),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Image.asset(
+                                  'assets/images/google_logo.png',
+                                  height: 24,
+                                  width: 24,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      width: 24,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Colors.blue,
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          'G',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(width: 12),
+                                const Text(
+                                  "Přihlásit se přes Google",
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -284,6 +310,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
         ],
       ),
+    ),
     );
   }
 }

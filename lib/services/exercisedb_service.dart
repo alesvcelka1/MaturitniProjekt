@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../core/utils/logger.dart';
 
 /// Služba pro komunikaci s ExerciseDB API
 /// API dokumentace: https://exercisedb-api.vercel.app/
@@ -22,7 +23,7 @@ class ExerciseDBService {
   /// ```
   static Future<List<Map<String, dynamic>>> getAllExercises() async {
     try {
-      print('Načítám všechny cviky z ExerciseDB API...');
+      AppLogger.info('Načítám všechny cviky z ExerciseDB API');
       
       List<Map<String, dynamic>> allExercises = [];
       int offset = 0;
@@ -32,7 +33,6 @@ class ExerciseDBService {
       while (hasMore) {
         // HTTP GET požadavek s paginací
         final url = '$_baseUrl/api/v1/exercises?offset=$offset&limit=$limit';
-        print('Načítám stránku: offset=$offset, limit=$limit');
         
         final response = await http
             .get(Uri.parse(url))
@@ -51,7 +51,6 @@ class ExerciseDBService {
               hasMore = false;
             } else {
               allExercises.addAll(exercises);
-              print('Načteno ${exercises.length} cviků, celkem: ${allExercises.length}');
               offset += limit;
               
               // Pokud jsme dostali méně než limit, už nejsou další data
@@ -67,10 +66,10 @@ class ExerciseDBService {
         }
       }
       
-      print('Úspěšně načteno celkem ${allExercises.length} cviků');
+      AppLogger.success('Úspěšně načteno ${allExercises.length} cviků');
       return allExercises;
     } catch (e) {
-      print('Chyba při načítání všech cviků: $e');
+      AppLogger.error('Chyba při načítání cviků z API', e);
       rethrow;
     }
   }
@@ -90,7 +89,7 @@ class ExerciseDBService {
   /// ```
   static Future<List<Map<String, dynamic>>> getExercisesByBodyPart(String bodyPart) async {
     try {
-      print('Načítám cviky pro část těla: $bodyPart');
+      AppLogger.debug('Načítám cviky pro část těla: $bodyPart');
       
       // HTTP GET požadavek na endpoint /api/v1/exercises/bodyPart/{part}
       final response = await http
@@ -102,7 +101,7 @@ class ExerciseDBService {
         
         if (data is Map && data.containsKey('data')) {
           final exercises = List<Map<String, dynamic>>.from(data['data']);
-          print('Načteno ${exercises.length} cviků pro $bodyPart');
+          AppLogger.info('Načteno ${exercises.length} cviků pro $bodyPart');
           return exercises;
         } else {
           throw Exception('Neočekávaný formát odpovědi');
@@ -111,7 +110,7 @@ class ExerciseDBService {
         throw Exception('HTTP chyba: ${response.statusCode}');
       }
     } catch (e) {
-      print('Chyba při načítání cviků pro $bodyPart: $e');
+      AppLogger.error('Chyba při načítání cviků pro $bodyPart', e);
       rethrow;
     }
   }
@@ -131,9 +130,6 @@ class ExerciseDBService {
   /// ```
   static Future<List<Map<String, dynamic>>> getExercisesByEquipment(String equipment) async {
     try {
-      print('Načítám cviky s vybavením: $equipment');
-      
-      // HTTP GET požadavek na endpoint /api/v1/exercises/equipment/{equipment}
       final response = await http
           .get(Uri.parse('$_baseUrl/api/v1/exercises/equipment/$equipment'))
           .timeout(_timeout);
@@ -143,7 +139,6 @@ class ExerciseDBService {
         
         if (data is Map && data.containsKey('data')) {
           final exercises = List<Map<String, dynamic>>.from(data['data']);
-          print('Načteno ${exercises.length} cviků s vybavením $equipment');
           return exercises;
         } else {
           throw Exception('Neočekávaný formát odpovědi');
@@ -152,7 +147,7 @@ class ExerciseDBService {
         throw Exception('HTTP chyba: ${response.statusCode}');
       }
     } catch (e) {
-      print('Chyba při načítání cviků s vybavením $equipment: $e');
+      AppLogger.error('Chyba při načítání cviků s vybavením $equipment', e);
       rethrow;
     }
   }
@@ -172,9 +167,6 @@ class ExerciseDBService {
   /// ```
   static Future<List<Map<String, dynamic>>> getExercisesByTarget(String targetMuscle) async {
     try {
-      print('Načítám cviky pro cílový sval: $targetMuscle');
-      
-      // HTTP GET požadavek na endpoint /api/v1/exercises/target/{target}
       final response = await http
           .get(Uri.parse('$_baseUrl/api/v1/exercises/target/$targetMuscle'))
           .timeout(_timeout);
@@ -184,7 +176,6 @@ class ExerciseDBService {
         
         if (data is Map && data.containsKey('data')) {
           final exercises = List<Map<String, dynamic>>.from(data['data']);
-          print('Načteno ${exercises.length} cviků pro $targetMuscle');
           return exercises;
         } else {
           throw Exception('Neočekávaný formát odpovědi');
@@ -193,7 +184,7 @@ class ExerciseDBService {
         throw Exception('HTTP chyba: ${response.statusCode}');
       }
     } catch (e) {
-      print('Chyba při načítání cviků pro $targetMuscle: $e');
+      AppLogger.error('Chyba při načítání cviků pro $targetMuscle', e);
       rethrow;
     }
   }

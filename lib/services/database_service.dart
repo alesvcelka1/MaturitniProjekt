@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../utils/constants.dart';
+import '../core/utils/logger.dart';
 
 /// Service pro správu databázových operací
 class DatabaseService {
@@ -26,9 +28,10 @@ class DatabaseService {
         'last_login': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
       
-      print('Profil uživatele vytvořen/aktualizován: ${user.email}');
+      AppLogger.success('Profil uživatele vytvořen: ${user.uid}');
     } catch (e) {
-      print('Chyba při vytváření profilu: $e');
+      AppLogger.error('Chyba při vytváření profilu uživatele', e);
+      rethrow;
     }
   }
 
@@ -54,7 +57,7 @@ class DatabaseService {
   static Future<List<Map<String, dynamic>>> getAllClients() async {
     try {
       final snapshot = await users
-          .where('role', isEqualTo: 'client')
+          .where('role', isEqualTo: UserRoles.client)
           .get();
       
       return snapshot.docs.map((doc) {
@@ -63,7 +66,7 @@ class DatabaseService {
         return data;
       }).toList();
     } catch (e) {
-      print('Chyba při načítání klientů: $e');
+      
       return [];
     }
   }
@@ -90,7 +93,7 @@ class DatabaseService {
           .get();
       
       if (existingWorkouts.docs.isNotEmpty) {
-        print('Trénink "$workoutName" už byl dnes dokončen, nepřidávám duplicitu');
+        AppLogger.warning('Trénink $workoutId už byl dnes dokončen');
         return;
       }
       
@@ -104,9 +107,9 @@ class DatabaseService {
         'date': DateTime.now().toIso8601String().split('T')[0], // YYYY-MM-DD format
       });
       
-      print('Dokončený trénink uložen: $workoutName');
+      AppLogger.success('Trénink uložen: $workoutName ($durationSeconds s)');
     } catch (e) {
-      print('Chyba při ukládání dokončeného tréninku: $e');
+      AppLogger.error('Chyba při ukládání dokončeného tréninku', e);
       rethrow;
     }
   }
@@ -189,7 +192,7 @@ class DatabaseService {
         'total_duration_minutes': (totalDurationSeconds / 60).round(),
       };
     } catch (e) {
-      print('Chyba při načítání statistik: $e');
+      
       return {
         'total_workouts': 0,
         'current_streak': 0,
@@ -197,50 +200,6 @@ class DatabaseService {
         'this_month': 0,
         'total_duration_minutes': 0,
       };
-    }
-  }
-
-  /// Získá posledních N dokončených tréninků pro uživatele
-  static Future<List<Map<String, dynamic>>> getUserRecentWorkouts(String userId, {int limit = 10}) async {
-    try {
-      final snapshot = await completedWorkouts
-          .where('user_id', isEqualTo: userId)
-          .limit(limit)
-          .get();
-      
-      final workouts = snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        data['id'] = doc.id;
-        return data;
-      }).toList();
-      
-      // Seřaď podle data (nejnovější první)
-      workouts.sort((a, b) {
-        final aDate = a['date'] as String;
-        final bDate = b['date'] as String;
-        return bDate.compareTo(aDate);
-      });
-      
-      return workouts;
-    } catch (e) {
-      print('Chyba při načítání posledních tréninků: $e');
-      return [];
-    }
-  }
-
-  /// Zkontroluje, zda uživatel dokončil konkrétní trénink
-  static Future<bool> isWorkoutCompleted(String userId, String workoutId) async {
-    try {
-      final snapshot = await completedWorkouts
-          .where('user_id', isEqualTo: userId)
-          .where('workout_id', isEqualTo: workoutId)
-          .limit(1)
-          .get();
-      
-      return snapshot.docs.isNotEmpty;
-    } catch (e) {
-      print('Chyba při kontrole dokončení tréninku: $e');
-      return false;
     }
   }
 
@@ -255,7 +214,7 @@ class DatabaseService {
           .map((doc) => (doc.data() as Map<String, dynamic>)['workout_id'] as String)
           .toSet();
     } catch (e) {
-      print('Chyba při načítání dokončených tréninků: $e');
+      
       return <String>{};
     }
   }
@@ -301,14 +260,14 @@ class DatabaseService {
       if (existingPR.docs.isNotEmpty) {
         // Aktualizuj existující PR
         await personalRecords.doc(existingPR.docs.first.id).update(prData);
-        print('PR aktualizován: $exerciseName - $weight kg x $reps');
+        
       } else {
         // Vytvoř nový PR
         await personalRecords.add(prData);
-        print('Nový PR uložen: $exerciseName - $weight kg x $reps');
+        
       }
     } catch (e) {
-      print('Chyba při ukládání PR: $e');
+      
       rethrow;
     }
   }
@@ -336,7 +295,7 @@ class DatabaseService {
       data['id'] = snapshot.docs.first.id;
       return data;
     } catch (e) {
-      print('Chyba při načítání PR: $e');
+      
       return null;
     }
   }
@@ -360,7 +319,7 @@ class DatabaseService {
       
       return prs;
     } catch (e) {
-      print('Chyba při načítání všech PRs: $e');
+      
       return {};
     }
   }
@@ -392,7 +351,7 @@ class DatabaseService {
       final percentage = double.tryParse(percentageStr);
       
       if (percentage == null) {
-        print('Neplatné procento: $loadString');
+        
         return null;
       }
       
@@ -403,17 +362,17 @@ class DatabaseService {
       );
       
       if (pr == null) {
-        print('PR neexistuje pro cvik: $exerciseName');
+        
         return null;
       }
       
       final prWeight = pr['weight'] as double;
       final calculatedWeight = (prWeight * percentage) / 100.0;
       
-      print('Vypočítáno: $percentage% z $prWeight kg = $calculatedWeight kg');
+      
       return calculatedWeight;
     } catch (e) {
-      print('Chyba při výpočtu váhy z procent: $e');
+      
       return null;
     }
   }
@@ -493,17 +452,17 @@ class DatabaseService {
       if (exerciseId != null) {
         // Aktualizace existujícího cviku
         await exercises.doc(exerciseId).update(exerciseData);
-        print('Cvik aktualizován: $name');
+        
         return exerciseId;
       } else {
         // Vytvoření nového cviku
         exerciseData['created_at'] = FieldValue.serverTimestamp();
         final doc = await exercises.add(exerciseData);
-        print('Nový cvik vytvořen: $name');
+        
         return doc.id;
       }
     } catch (e) {
-      print('Chyba při ukládání cviku: $e');
+      
       rethrow;
     }
   }
@@ -528,61 +487,12 @@ class DatabaseService {
       
       return allExercises;
     } catch (e) {
-      print('Chyba při načítání cviků: $e');
-      return [];
-    }
-  }
-
-  /// Vyhledá cviky podle textu (název nebo popis)
-  static Future<List<Map<String, dynamic>>> searchExercises(String query) async {
-    try {
-      final allExercises = await getAllExercises();
-      final lowercaseQuery = query.toLowerCase();
       
-      return allExercises.where((exercise) {
-        final name = (exercise['name'] as String).toLowerCase();
-        final description = (exercise['description'] as String? ?? '').toLowerCase();
-        return name.contains(lowercaseQuery) || description.contains(lowercaseQuery);
-      }).toList();
-    } catch (e) {
-      print('Chyba při vyhledávání cviků: $e');
       return [];
     }
   }
 
   /// Filtruje cviky podle svalových skupin
-  static Future<List<Map<String, dynamic>>> filterExercisesByMuscleGroup(
-    List<String> muscleGroups,
-  ) async {
-    try {
-      final allExercises = await getAllExercises();
-      
-      return allExercises.where((exercise) {
-        final exerciseMuscles = List<String>.from(exercise['muscle_groups'] ?? []);
-        return muscleGroups.any((group) => exerciseMuscles.contains(group));
-      }).toList();
-    } catch (e) {
-      print('Chyba při filtrování cviků: $e');
-      return [];
-    }
-  }
-
-  /// Filtruje cviky podle obtížnosti
-  static Future<List<Map<String, dynamic>>> filterExercisesByDifficulty(
-    String difficulty,
-  ) async {
-    try {
-      final allExercises = await getAllExercises();
-      return allExercises
-          .where((exercise) => exercise['difficulty'] == difficulty)
-          .toList();
-    } catch (e) {
-      print('Chyba při filtrování cviků podle obtížnosti: $e');
-      return [];
-    }
-  }
-
-  /// Získá detail konkrétního cviku
   static Future<Map<String, dynamic>?> getExerciseById(String exerciseId) async {
     try {
       final doc = await exercises.doc(exerciseId).get();
@@ -592,7 +502,7 @@ class DatabaseService {
       data['id'] = doc.id;
       return data;
     } catch (e) {
-      print('Chyba při načítání detailu cviku: $e');
+      
       return null;
     }
   }
@@ -608,15 +518,15 @@ class DatabaseService {
       
       final data = doc.data() as Map<String, dynamic>;
       if (data['created_by'] != currentUser.uid) {
-        print('Nelze smazat cvik vytvořený jiným uživatelem');
+        
         return false;
       }
       
       await exercises.doc(exerciseId).delete();
-      print('Cvik smazán');
+      
       return true;
     } catch (e) {
-      print('Chyba při mazání cviku: $e');
+      
       return false;
     }
   }
@@ -652,16 +562,122 @@ class DatabaseService {
         'user_id': userId,
         'trainer_id': trainerId,
         'scheduled_date': Timestamp.fromDate(scheduledDate),
-        'status': 'scheduled',
+        'status': WorkoutStatus.scheduled,
         'created_at': FieldValue.serverTimestamp(),
         'notes': notes,
       });
       
-      print('Trénink naplánován na: ${scheduledDate.toString()}');
+
       return doc.id;
     } catch (e) {
-      print('Chyba při plánování tréninku: $e');
+      
       rethrow;
+    }
+  }
+
+  /// Získá tréninky trenéra pro kalendářončený
+  static Future<Map<String, dynamic>> getTrainerStats(String trainerId) async {
+    try {
+      
+      
+      // Počet klientů
+      final clientsSnapshot = await users
+          .where('role', isEqualTo: UserRoles.client)
+          .where('trainer_id', isEqualTo: trainerId)
+          .get();
+      final clientCount = clientsSnapshot.docs.length;
+      
+
+      // Počet vytvořených tréninků
+      final workoutsSnapshot = await workouts
+          .where('trainer_id', isEqualTo: trainerId)
+          .get();
+      final workoutCount = workoutsSnapshot.docs.length;
+      
+
+      // Počet dokončených tréninků klientů tento týden
+      final now = DateTime.now();
+      // Začátek týdne (pondělí 00:00:00)
+      final weekStart = DateTime(now.year, now.month, now.day - (now.weekday - 1));
+      final weekEnd = weekStart.add(const Duration(days: AppConfig.daysInWeek));
+
+
+      
+      
+      // Získat všechny dokončené tréninky od začátku týdne
+      final completedThisWeek = await completedWorkouts
+          .where('completed_at', isGreaterThanOrEqualTo: Timestamp.fromDate(weekStart))
+          .where('completed_at', isLessThan: Timestamp.fromDate(weekEnd))
+          .get();
+      
+      
+      // Filtrovat pouze tréninky klientů tohoto trenéra
+      final clientIds = clientsSnapshot.docs.map((doc) => doc.id).toSet();
+      
+      
+      final weeklyCompletedCount = completedThisWeek.docs.where((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        final userId = data['user_id'];
+        return clientIds.contains(userId);
+      }).length;
+      
+
+      return {
+        'client_count': clientCount,
+        'workout_count': workoutCount,
+        'weekly_completed': weeklyCompletedCount,
+        'clients': clientsSnapshot.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          data['id'] = doc.id;
+          return data;
+        }).toList(),
+      };
+    } catch (e) {
+      
+      return {
+        'client_count': 0,
+        'workout_count': 0,
+        'weekly_completed': 0,
+        'clients': [],
+      };
+    }
+  }
+
+  /// Získá nejaktivnější klienty trenéra
+  static Future<List<Map<String, dynamic>>> getTrainerTopClients(String trainerId, {int limit = AppConfig.topClientsLimit}) async {
+    try {
+      // Získat klienty trenéra
+      final clientsSnapshot = await users
+          .where('role', isEqualTo: UserRoles.client)
+          .where('trainer_id', isEqualTo: trainerId)
+          .get();
+
+      final clientStats = <Map<String, dynamic>>[];
+
+      for (final clientDoc in clientsSnapshot.docs) {
+        final clientData = clientDoc.data() as Map<String, dynamic>;
+        
+        // Spočítat dokončené tréninky pro každého klienta
+        final completedSnapshot = await completedWorkouts
+            .where('user_id', isEqualTo: clientDoc.id)
+            .get();
+        
+        clientStats.add({
+          'id': clientDoc.id,
+          'name': clientData['display_name'] ?? 'Bez jména',
+          'email': clientData['email'] ?? '',
+          'completed_count': completedSnapshot.docs.length,
+          'photo_url': clientData['photo_url'],
+        });
+      }
+
+      // Seřadit podle počtu dokončených tréninků
+      clientStats.sort((a, b) => (b['completed_count'] as int).compareTo(a['completed_count'] as int));
+
+      return clientStats.take(limit).toList();
+    } catch (e) {
+      
+      return [];
     }
   }
 
@@ -693,7 +709,7 @@ class DatabaseService {
         return data;
       }).toList();
     } catch (e) {
-      print('Chyba při načítání naplánovaných tréninků: $e');
+      
       return [];
     }
   }
@@ -726,7 +742,7 @@ class DatabaseService {
         return data;
       }).toList();
     } catch (e) {
-      print('Chyba při načítání tréninků trenéra: $e');
+      
       return [];
     }
   }
@@ -735,13 +751,13 @@ class DatabaseService {
   static Future<void> completeScheduledWorkout(String scheduledWorkoutId) async {
     try {
       await scheduledWorkouts.doc(scheduledWorkoutId).update({
-        'status': 'completed',
+        'status': WorkoutStatus.completed,
         'completed_at': FieldValue.serverTimestamp(),
       });
       
-      print('Naplánovaný trénink dokončen');
+      
     } catch (e) {
-      print('Chyba při dokončování naplánovaného tréninku: $e');
+      
       rethrow;
     }
   }
@@ -750,12 +766,12 @@ class DatabaseService {
   static Future<void> cancelScheduledWorkout(String scheduledWorkoutId) async {
     try {
       await scheduledWorkouts.doc(scheduledWorkoutId).update({
-        'status': 'cancelled',
+        'status': WorkoutStatus.cancelled,
       });
       
-      print('Naplánovaný trénink zrušen');
+      
     } catch (e) {
-      print('Chyba při rušení naplánovaného tréninku: $e');
+      
       rethrow;
     }
   }
@@ -764,9 +780,9 @@ class DatabaseService {
   static Future<void> deleteScheduledWorkout(String scheduledWorkoutId) async {
     try {
       await scheduledWorkouts.doc(scheduledWorkoutId).delete();
-      print('Naplánovaný trénink smazán');
+      
     } catch (e) {
-      print('Chyba při mazání naplánovaného tréninku: $e');
+      
       rethrow;
     }
   }
@@ -781,126 +797,26 @@ class DatabaseService {
         'scheduled_date': Timestamp.fromDate(newDate),
       });
       
-      print('Trénink přesunut na: ${newDate.toString()}');
+
     } catch (e) {
-      print('Chyba při přesouvání tréninku: $e');
+      
       rethrow;
     }
   }
 
-  /// Získá statistiky trenéra
-  static Future<Map<String, dynamic>> getTrainerStats(String trainerId) async {
+  /// Zkontroluje, zda uživatel dokončil konkrétní trénink
+  static Future<bool> isWorkoutCompleted(String userId, String workoutId) async {
     try {
-      print('Načítání statistik trenéra: $trainerId');
-      
-      // Počet klientů
-      final clientsSnapshot = await users
-          .where('role', isEqualTo: 'client')
-          .where('trainer_id', isEqualTo: trainerId)
+      final snapshot = await completedWorkouts
+          .where('user_id', isEqualTo: userId)
+          .where('workout_id', isEqualTo: workoutId)
+          .limit(1)
           .get();
-      final clientCount = clientsSnapshot.docs.length;
-      print('👥 Počet klientů: $clientCount');
-
-      // Počet vytvořených tréninků
-      final workoutsSnapshot = await workouts
-          .where('trainer_id', isEqualTo: trainerId)
-          .get();
-      final workoutCount = workoutsSnapshot.docs.length;
-      print('Počet vytvořených tréninků: $workoutCount');
-
-      // Počet dokončených tréninků klientů tento týden
-      final now = DateTime.now();
-      // Začátek týdne (pondělí 00:00:00)
-      final weekStart = DateTime(now.year, now.month, now.day - (now.weekday - 1));
-      final weekEnd = weekStart.add(const Duration(days: 7));
-      print('📅 Začátek týdne (pondělí): $weekStart');
-      print('📅 Konec týdne (neděle 23:59): $weekEnd');
-      print('📅 Dnes: $now');
       
-      // Získat všechny dokončené tréninky od začátku týdne
-      final completedThisWeek = await completedWorkouts
-          .where('completed_at', isGreaterThanOrEqualTo: Timestamp.fromDate(weekStart))
-          .where('completed_at', isLessThan: Timestamp.fromDate(weekEnd))
-          .get();
-      print('Dokončených tréninků celkem tento týden: ${completedThisWeek.docs.length}');
-      
-      // Filtrovat pouze tréninky klientů tohoto trenéra
-      final clientIds = clientsSnapshot.docs.map((doc) => doc.id).toSet();
-      print('🔍 Client IDs trenéra: $clientIds');
-      
-      int matchedCount = 0;
-      final weeklyCompletedCount = completedThisWeek.docs.where((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        final userId = data['user_id'];
-        final workoutName = data['workout_name'] ?? 'Bez názvu';
-        final completedAt = (data['completed_at'] as Timestamp?)?.toDate();
-        final matches = clientIds.contains(userId);
-        if (matches) {
-          matchedCount++;
-          print('  ✓ #$matchedCount: "$workoutName" - klient: $userId - čas: $completedAt');
-        } else {
-          print('  ✗ "$workoutName" - user: $userId (není klient tohoto trenéra)');
-        }
-        return matches;
-      }).length;
-      print('🎯 Dokončených tréninků klientů trenéra tento týden: $weeklyCompletedCount');
-
-      return {
-        'client_count': clientCount,
-        'workout_count': workoutCount,
-        'weekly_completed': weeklyCompletedCount,
-        'clients': clientsSnapshot.docs.map((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          data['id'] = doc.id;
-          return data;
-        }).toList(),
-      };
+      return snapshot.docs.isNotEmpty;
     } catch (e) {
-      print('Chyba při načítání statistik trenéra: $e');
-      return {
-        'client_count': 0,
-        'workout_count': 0,
-        'weekly_completed': 0,
-        'clients': [],
-      };
-    }
-  }
-
-  /// Získá nejaktivnější klienty trenéra
-  static Future<List<Map<String, dynamic>>> getTrainerTopClients(String trainerId, {int limit = 5}) async {
-    try {
-      // Získat klienty trenéra
-      final clientsSnapshot = await users
-          .where('role', isEqualTo: 'client')
-          .where('trainer_id', isEqualTo: trainerId)
-          .get();
-
-      final clientStats = <Map<String, dynamic>>[];
-
-      for (final clientDoc in clientsSnapshot.docs) {
-        final clientData = clientDoc.data() as Map<String, dynamic>;
-        
-        // Spočítat dokončené tréninky pro každého klienta
-        final completedSnapshot = await completedWorkouts
-            .where('user_id', isEqualTo: clientDoc.id)
-            .get();
-        
-        clientStats.add({
-          'id': clientDoc.id,
-          'name': clientData['display_name'] ?? 'Bez jména',
-          'email': clientData['email'] ?? '',
-          'completed_count': completedSnapshot.docs.length,
-          'photo_url': clientData['photo_url'],
-        });
-      }
-
-      // Seřadit podle počtu dokončených tréninků
-      clientStats.sort((a, b) => (b['completed_count'] as int).compareTo(a['completed_count'] as int));
-
-      return clientStats.take(limit).toList();
-    } catch (e) {
-      print('Chyba při načítání top klientů: $e');
-      return [];
+      
+      return false;
     }
   }
 
@@ -908,7 +824,7 @@ class DatabaseService {
   /// Ponechá pouze nejnovější záznam pro každý workout_id uživatele v daný den
   static Future<void> removeDuplicateCompletedWorkouts(String userId) async {
     try {
-      print('🧹 Odstraňování duplicit pro uživatele: $userId');
+      
       
       final allWorkouts = await completedWorkouts
           .where('user_id', isEqualTo: userId)
@@ -927,7 +843,7 @@ class DatabaseService {
         if (seenWorkouts.containsKey(key)) {
           // Duplicita - smažeme
           toDelete.add(doc.id);
-          print('  Duplicita nalezena: ${data['workout_name']} ($date)');
+
         } else {
           // První (nejnovější) záznam - ponecháme
           seenWorkouts[key] = doc.id;
@@ -938,12 +854,13 @@ class DatabaseService {
         for (var docId in toDelete) {
           await completedWorkouts.doc(docId).delete();
         }
-        print('Odstraněno ${toDelete.length} duplicitních záznamů');
+        
       } else {
-        print('Žádné duplicity nenalezeny');
+        
       }
     } catch (e) {
-      print('Chyba při odstraňování duplicit: $e');
+      
     }
   }
+
 }

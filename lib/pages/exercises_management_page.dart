@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/populate_exercises_from_api.dart';
+import '../core/utils/logger.dart';
 
 /// Stránka pro správu databáze cviků z Firebase Firestore
 class ExercisesManagementPage extends StatefulWidget {
@@ -37,7 +38,7 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
     });
     
     try {
-      print('Načítám cviky z Firebase Firestore...');
+      AppLogger.info('Načítám cviky z Firebase Firestore');
       
       final snapshot = await FirebaseFirestore.instance
           .collection('exercises_api')
@@ -67,9 +68,9 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
         _isLoading = false;
       });
       
-      print('Načteno ${_exercises.length} cviků z Firebase');
+      AppLogger.success('Načteno ${_exercises.length} cviků z Firebase');
     } catch (e) {
-      print('Chyba při načítání z Firebase: $e');
+      AppLogger.error('Chyba při načítání z Firebase', e);
       setState(() {
         _errorMessage = 'Nepodařilo se načíst cviky z databáze.\n$e';
         _isLoading = false;
@@ -159,7 +160,14 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
       
       if (confirm == true && mounted) {
         try {
-          await clearAPIExercises();
+          // Smazání všech cviků z databáze
+          final firestore = FirebaseFirestore.instance;
+          final snapshot = await firestore.collection('exercises_api').get();
+          
+          for (var doc in snapshot.docs) {
+            await doc.reference.delete();
+          }
+          
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -239,7 +247,7 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
         children: [
           // Search bar
           Container(
-            color: Colors.white,
+            color: Theme.of(context).scaffoldBackgroundColor,
             padding: const EdgeInsets.all(16),
             child: TextField(
               controller: _searchController,
@@ -248,6 +256,11 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
               },
               decoration: InputDecoration(
                 hintText: 'Hledat cvik podle názvu, partie, zařízení...',
+                hintStyle: TextStyle(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey[400]
+                      : Colors.grey[600],
+                ),
                 prefixIcon: const Icon(Icons.search, color: Colors.orange),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
@@ -258,7 +271,9 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
                       )
                     : null,
                 filled: true,
-                fillColor: const Color(0xFFF8F9FA),
+                fillColor: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.grey[850]
+                    : const Color(0xFFF8F9FA),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -274,7 +289,7 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
           // Results counter
           if (!_isLoading && _errorMessage == null)
             Container(
-              color: Colors.white,
+              color: Theme.of(context).scaffoldBackgroundColor,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
