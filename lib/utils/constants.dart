@@ -10,10 +10,10 @@ class UserRoles {
 class FirestoreCollections {
   static const String workouts = 'workouts';
   static const String users = 'users';
-  // Cviky jsou nyní spravovány lokálně (data/exercises_data.dart)
   static const String completedWorkouts = 'completed_workouts';
   static const String personalRecords = 'personal_records';
   static const String scheduledWorkouts = 'scheduled_workouts';
+  static const String messages = 'messages';
 }
 
 /// Stavy tréninků
@@ -30,4 +30,29 @@ class AppConfig {
   static const int weekStartDay = 1; // Pondělí
   static const int daysInWeek = 7;
   static const int topClientsLimit = 5;
+  static const int defaultEstimatedDuration = 30; // minuty
+  static const int targetWorkoutsPerWeek = 5;
+}
+
+/// UI konstanty - spacing a rozměry
+class AppSpacing {
+  static const double small = 8.0;
+  static const double medium = 16.0;
+  static const double large = 20.0;
+  static const double xlarge = 24.0;
+}
+
+/// UI konstanty - zaoblení rohů
+class AppRadius {
+  static const double small = 8.0;
+  static const double medium = 16.0;
+  static const double large = 24.0;
+}
+
+/// Velikosti ikon
+class AppIconSizes {
+  static const double small = 16.0;
+  static const double medium = 24.0;
+  static const double large = 32.0;
+  static const double xlarge = 40.0;
 }

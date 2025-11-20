@@ -323,6 +323,30 @@ class DatabaseService {
     }
   }
 
+  /// Smaže Personal Record pro konkrétní cvik
+  static Future<void> deletePersonalRecord({
+    required String userId,
+    required String exerciseName,
+  }) async {
+    try {
+      final normalizedName = exerciseName.toLowerCase().trim();
+      
+      final snapshot = await personalRecords
+          .where('user_id', isEqualTo: userId)
+          .where('exercise_name', isEqualTo: normalizedName)
+          .limit(1)
+          .get();
+      
+      if (snapshot.docs.isNotEmpty) {
+        await personalRecords.doc(snapshot.docs.first.id).delete();
+        AppLogger.info('PR smazán: $exerciseName pro uživatele $userId');
+      }
+    } catch (e) {
+      AppLogger.error('Chyba při mazání PR', e);
+      rethrow;
+    }
+  }
+
   /// Vypočítá váhu v kg z procent PR
   /// 
   /// Příklady:

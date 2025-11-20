@@ -791,6 +791,65 @@ class _ProgressPageState extends State<ProgressPage> {
               onPressed: () => Navigator.of(dialogContext).pop(),
               child: const Text('Zrušit'),
             ),
+            TextButton(
+              onPressed: () async {
+                // Potvrzení smazání
+                final confirm = await showDialog<bool>(
+                  context: dialogContext,
+                  builder: (BuildContext confirmContext) {
+                    return AlertDialog(
+                      title: const Text('Smazat PR?'),
+                      content: Text('Opravdu chceš smazat Personal Record pro $exerciseName?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(confirmContext).pop(false),
+                          child: const Text('Ne'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(confirmContext).pop(true),
+                          style: TextButton.styleFrom(foregroundColor: Colors.red),
+                          child: const Text('Ano, smazat'),
+                        ),
+                      ],
+                    );
+                  },
+                );
+
+                if (confirm == true) {
+                  try {
+                    final currentUser = FirebaseAuth.instance.currentUser;
+                    if (currentUser != null) {
+                      await DatabaseService.deletePersonalRecord(
+                        userId: currentUser.uid,
+                        exerciseName: exerciseName,
+                      );
+
+                      if (!mounted) return;
+                      
+                      Navigator.of(dialogContext).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('PR smazán'),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                      
+                      _loadPersonalRecords(); // Refresh
+                    }
+                  } catch (e) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Chyba při mazání: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Smazat'),
+            ),
             ElevatedButton(
               onPressed: () async {
                 final weight = double.tryParse(weightController.text);
