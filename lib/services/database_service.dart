@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/constants.dart';
 import '../core/utils/logger.dart';
-import '../data/exercises_data.dart' as exercises_data;
 
 /// Service pro správu databázových operací
 class DatabaseService {
@@ -14,6 +13,7 @@ class DatabaseService {
   static CollectionReference get completedWorkouts => _firestore.collection('completed_workouts');
   static CollectionReference get personalRecords => _firestore.collection('personal_records');
   static CollectionReference get scheduledWorkouts => _firestore.collection('scheduled_workouts');
+  static CollectionReference get exercises => _firestore.collection('exercises');
 
   /// Vytvoří profil uživatele v databázi
   static Future<void> createUserProfile(User user, {String role = 'client'}) async {
@@ -402,29 +402,43 @@ class DatabaseService {
 
   // ========== EXERCISE DATABASE ==========
 
-  /// Cviky jsou nyní spravovány lokálně v souboru data/exercises_data.dart
-  /// Pro přidání nového cviku je třeba editovat tento soubor a přidat GIF do assets/gifs/
+  /// Cviky jsou uložené v Firestore databázi
+  /// GIF soubory jsou lokální v assets/gifs/
 
-  /// Načte všechny cviky z lokální databáze
+  /// Načte všechny cviky z Firestore
   static Future<List<Map<String, dynamic>>> getAllExercises() async {
     try {
-      // Načti lokální cviky
-      final allExercises = exercises_data.getAllExercises();
+      final snapshot = await exercises.orderBy('name').get();
       
-      AppLogger.info('Načteno ${allExercises.length} cviků z lokální databáze');
+      final exercisesList = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        return data;
+      }).toList();
       
-      return allExercises;
+      AppLogger.info('Načteno ${exercisesList.length} cviků z Firestore');
+      
+      return exercisesList;
     } catch (e) {
-      AppLogger.error('Chyba při načítání cviků', e);
+      AppLogger.error('Chyba při načítání cviků z Firestore', e);
       return [];
     }
   }
 
-  /// Filtruje cviky podle partie těla
+  /// Získá stream všech cviků
+  static Stream<QuerySnapshot> getExercisesStream() {
+    return exercises.orderBy('name').snapshots();
+  }
+
+  /// Načte konkrétní cvik podle ID
   static Future<Map<String, dynamic>?> getExerciseById(String exerciseId) async {
     try {
-      final exercise = exercises_data.getExerciseById(exerciseId);
-      return exercise;
+      final doc = await exercises.doc(exerciseId).get();
+      if (!doc.exists) return null;
+      
+      final data = doc.data() as Map<String, dynamic>;
+      data['id'] = doc.id;
+      return data;
     } catch (e) {
       AppLogger.error('Chyba při načítání cviku $exerciseId', e);
       return null;
@@ -433,16 +447,87 @@ class DatabaseService {
 
   /// Získá seznam všech partií těla
   static Future<List<String>> getBodyParts() async {
-    return exercises_data.getBodyParts();
+    return ['chest', 'back', 'legs', 'shoulders', 'arms', 'core'];
   }
 
   /// Filtruje cviky podle partie těla
   static Future<List<Map<String, dynamic>>> getExercisesByBodyPart(String bodyPart) async {
     try {
-      return exercises_data.getExercisesByBodyPart(bodyPart);
+      final snapshot = await exercises
+          .where('bodyPart', isEqualTo: bodyPart)
+          .orderBy('name')
+          .get();
+      
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        return data;
+      }).toList();
     } catch (e) {
       AppLogger.error('Chyba při filtrování cviků podle $bodyPart', e);
       return [];
+    }
+  }
+
+  /// Přidá nový cvik do Firestore
+  static Future<String?> addExercise({
+    required String name,
+    required String gifPath,
+    required String bodyPart,
+  }) async {
+    try {
+      final doc = await exercises.add({
+        'name': name,
+        'gifPath': gifPath,
+        'bodyPart': bodyPart,
+        'created_at': FieldValue.serverTimestamp(),
+        'updated_at': FieldValue.serverTimestamp(),
+      });
+      
+      AppLogger.success('Cvik přidán: $name (${doc.id})');
+      return doc.id;
+    } catch (e) {
+      AppLogger.error('Chyba při přidávání cviku', e);
+      return null;
+    }
+  }
+
+  /// Aktualizuje existující cvik
+  static Future<bool> updateExercise({
+    required String exerciseId,
+    String? name,
+    String? gifPath,
+    String? bodyPart,
+  }) async {
+    try {
+      final updateData = <String, dynamic>{
+        'updated_at': FieldValue.serverTimestamp(),
+      };
+      
+      if (name != null) updateData['name'] = name;
+      if (gifPath != null) updateData['gifPath'] = gifPath;
+      if (bodyPart != null) updateData['bodyPart'] = bodyPart;
+      
+      await exercises.doc(exerciseId).update(updateData);
+      
+      AppLogger.success('Cvik aktualizován: $exerciseId');
+      return true;
+    } catch (e) {
+      AppLogger.error('Chyba při aktualizaci cviku', e);
+      return false;
+    }
+  }
+
+  /// Smaže cvik z Firestore
+  static Future<bool> deleteExercise(String exerciseId) async {
+    try {
+      await exercises.doc(exerciseId).delete();
+      
+      AppLogger.success('Cvik smazán: $exerciseId');
+      return true;
+    } catch (e) {
+      AppLogger.error('Chyba při mazání cviku', e);
+      return false;
     }
   }
 

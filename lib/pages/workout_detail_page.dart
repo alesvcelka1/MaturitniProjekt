@@ -643,7 +643,7 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
       final normalizedName = exerciseName.toLowerCase().trim();
       
       for (var exercise in allExercises) {
-        final name = (exercise['name'] as String).toLowerCase().trim();
+        final name = (exercise['name'] as String? ?? '').toLowerCase().trim();
         if (name == normalizedName) {
           return exercise;
         }

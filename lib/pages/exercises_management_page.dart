@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/database_service.dart';
 import '../core/utils/logger.dart';
+import '../models/exercise.dart';
 
 /// Stránka pro správu databáze cviků z Firebase Firestore
 class ExercisesManagementPage extends StatefulWidget {
@@ -11,17 +13,17 @@ class ExercisesManagementPage extends StatefulWidget {
 }
 
 class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
-  List<Map<String, dynamic>> _exercises = [];
-  List<Map<String, dynamic>> _filteredExercises = [];
-  bool _isLoading = true;
-  String? _errorMessage;
   final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    _loadExercises();
-    _searchController.addListener(_filterExercises);
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text.toLowerCase();
+      });
+    });
   }
 
   @override
@@ -30,52 +32,11 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
     super.dispose();
   }
 
-  Future<void> _loadExercises() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    
-    try {
-      AppLogger.info('Načítám cviky z lokální databáze');
-      
-      // Načti lokální cviky
-      final exercises = await DatabaseService.getAllExercises();
-      
-      if (exercises.isEmpty) {
-        throw Exception('V databázi nejsou žádné cviky');
-      }
-      
-      setState(() {
-        _exercises = exercises;
-        _filteredExercises = exercises;
-        _isLoading = false;
-      });
-      
-      AppLogger.success('Načteno ${_exercises.length} cviků');
-    } catch (e) {
-      AppLogger.error('Chyba při načítání cviků', e);
-      setState(() {
-        _errorMessage = 'Nepodařilo se načíst cviky.\n$e';
-        _isLoading = false;
-      });
-    }
-  }
-
-  void _filterExercises() {
-    final query = _searchController.text.toLowerCase();
-    setState(() {
-      if (query.isEmpty) {
-        _filteredExercises = _exercises;
-      } else {
-        _filteredExercises = _exercises.where((exercise) {
-          final name = (exercise['name'] as String).toLowerCase();
-          final bodyPart = (exercise['bodyPart'] as String).toLowerCase();
-
-          return name.contains(query) || bodyPart.contains(query);
-        }).toList();
-      }
-    });
+  void _showAddExerciseDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => _AddExerciseDialog(),
+    );
   }
 
   @override
@@ -89,11 +50,16 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadExercises,
-            tooltip: 'Obnovit',
+            icon: const Icon(Icons.add),
+            onPressed: _showAddExerciseDialog,
+            tooltip: 'Přidat cvik',
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddExerciseDialog,
+        backgroundColor: Colors.orange,
+        child: const Icon(Icons.add),
       ),
       body: Column(
         children: [
@@ -103,11 +69,8 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
             padding: const EdgeInsets.all(16),
             child: TextField(
               controller: _searchController,
-              onChanged: (value) {
-                setState(() {}); // Přepnout UI pro zobrazení clear buttonu
-              },
               decoration: InputDecoration(
-                hintText: 'Hledat cvik podle názvu, partie, zařízení...',
+                hintText: 'Hledat cvik podle názvu nebo partie...',
                 hintStyle: TextStyle(
                   color: Theme.of(context).brightness == Brightness.dark
                       ? Colors.grey[400]
@@ -138,62 +101,91 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
             ),
           ),
 
-          // Results counter
-          if (!_isLoading && _errorMessage == null)
-            Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  Icon(Icons.fitness_center, size: 16, color: Colors.grey[600]),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${_filteredExercises.length} cviků',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[700],
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-          // Exercise list
+          // Exercise list from Firestore
           Expanded(
-            child: _isLoading
-                ? const Center(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: DatabaseService.getExercisesStream(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return _buildErrorState(snapshot.error.toString());
+                }
+
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         CircularProgressIndicator(color: Colors.orange),
                         SizedBox(height: 16),
                         Text(
-                          'Načítání cviků z databáze...',
+                          'Načítání cviků z Firestore...',
                           style: TextStyle(color: Colors.grey),
                         ),
                       ],
                     ),
-                  )
-                : _errorMessage != null
-                    ? _buildErrorState()
-                    : _filteredExercises.isEmpty
-                        ? _buildEmptyState()
-                        : ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: _filteredExercises.length,
-                            itemBuilder: (context, index) {
-                              final exercise = _filteredExercises[index];
-                              return _buildExerciseCard(exercise);
-                            },
+                  );
+                }
+
+                final exercises = snapshot.data!.docs.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  data['id'] = doc.id;
+                  return data;
+                }).toList();
+
+                // Filtrování
+                final filteredExercises = exercises.where((exercise) {
+                  if (_searchQuery.isEmpty) return true;
+                  final name = (exercise['name'] as String? ?? '').toLowerCase();
+                  final bodyPart = (exercise['bodyPart'] as String? ?? '').toLowerCase();
+                  return name.contains(_searchQuery) || bodyPart.contains(_searchQuery);
+                }).toList();
+
+                if (filteredExercises.isEmpty) {
+                  return _buildEmptyState();
+                }
+
+                return Column(
+                  children: [
+                    // Results counter
+                    Container(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Row(
+                        children: [
+                          Icon(Icons.fitness_center, size: 16, color: Colors.grey[600]),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${filteredExercises.length} cviků',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[700],
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: filteredExercises.length,
+                        itemBuilder: (context, index) {
+                          final exercise = filteredExercises[index];
+                          return _buildExerciseCard(exercise);
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildErrorState() {
+  Widget _buildErrorState(String error) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -212,20 +204,9 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              _errorMessage ?? 'Neznámá chyba',
+              error,
               style: TextStyle(color: Colors.grey[600]),
               textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _loadExercises,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Zkusit znovu'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
             ),
           ],
         ),
@@ -260,6 +241,7 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
   Widget _buildExerciseCard(Map<String, dynamic> exercise) {
     final name = exercise['name']?.toString() ?? 'Neznámý cvik';
     final bodyPart = exercise['bodyPart']?.toString() ?? 'Nezadáno';
+    final exerciseId = exercise['id']?.toString() ?? '';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -269,6 +251,7 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
       ),
       child: InkWell(
         onTap: () => _showExerciseDetailDialog(exercise),
+        onLongPress: () => _showDeleteConfirmDialog(exerciseId, name),
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -322,11 +305,11 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
                 ),
               ),
 
-              // Arrow icon
-              const Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: Colors.grey,
+              // Delete button
+              IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                onPressed: () => _showDeleteConfirmDialog(exerciseId, name),
+                tooltip: 'Smazat cvik',
               ),
             ],
           ),
@@ -335,10 +318,65 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
     );
   }
 
+  Future<void> _showDeleteConfirmDialog(String exerciseId, String exerciseName) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Smazat cvik?'),
+        content: Text('Opravdu chceš smazat cvik "$exerciseName"?\n\nTato akce je nevratná.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Zrušit'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Smazat'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await _deleteExercise(exerciseId, exerciseName);
+    }
+  }
+
+  Future<void> _deleteExercise(String exerciseId, String exerciseName) async {
+    try {
+      final success = await DatabaseService.deleteExercise(exerciseId);
+      
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Cvik "$exerciseName" byl smazán'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else if (mounted) {
+        throw Exception('Nepodařilo se smazat cvik');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Chyba při mazání: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   void _showExerciseDetailDialog(Map<String, dynamic> exercise) {
-    final name = exercise['name'] as String;
-    final bodyPart = exercise['bodyPart'] as String;
-    final gifPath = exercise['gifPath'] as String;
+    final name = exercise['name'] as String? ?? 'Bez názvu';
+    final bodyPart = exercise['bodyPart'] as String? ?? '';
+    final gifPath = exercise['gifPath'] as String? ?? '';
+    final exerciseId = exercise['id'] as String? ?? '';
 
     showDialog(
       context: context,
@@ -405,21 +443,45 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
 
                       const SizedBox(height: 20),
 
-                      // Close button
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () => Navigator.pop(context),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                      // Buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _showDeleteConfirmDialog(exerciseId, name);
+                              },
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              label: const Text(
+                                'Smazat',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                side: const BorderSide(color: Colors.red),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
                             ),
                           ),
-                          child: const Text('Zavřít'),
-                        ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text('Zavřít'),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -466,5 +528,197 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
             ? word
             : word[0].toUpperCase() + word.substring(1).toLowerCase())
         .join(' ');
+  }
+}
+
+// Dialog pro přidání nového cviku
+class _AddExerciseDialog extends StatefulWidget {
+  @override
+  State<_AddExerciseDialog> createState() => _AddExerciseDialogState();
+}
+
+class _AddExerciseDialogState extends State<_AddExerciseDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _gifPathController = TextEditingController();
+  String _selectedBodyPart = 'chest';
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _gifPathController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submitExercise() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final exerciseId = await DatabaseService.addExercise(
+        name: _nameController.text.trim(),
+        gifPath: _gifPathController.text.trim(),
+        bodyPart: _selectedBodyPart,
+      );
+
+      if (exerciseId != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cvik úspěšně přidán!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.of(context).pop();
+      } else {
+        throw Exception('Nepodařilo se přidat cvik');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Chyba: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 500),
+        padding: const EdgeInsets.all(24),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.add_circle, color: Colors.orange, size: 28),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Přidat nový cvik',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // Název cviku
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Název cviku',
+                  hintText: 'např. Bench Press',
+                  prefixIcon: Icon(Icons.fitness_center),
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Zadej název cviku';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // GIF cesta
+              TextFormField(
+                controller: _gifPathController,
+                decoration: const InputDecoration(
+                  labelText: 'GIF cesta (volitelné)',
+                  hintText: 'assets/gifs/bench_press.gif',
+                  prefixIcon: Icon(Icons.image),
+                  border: OutlineInputBorder(),
+                  helperText: 'Nech prázdné pokud nemáš GIF soubor',
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Partie těla
+              DropdownButtonFormField<String>(
+                value: _selectedBodyPart,
+                decoration: const InputDecoration(
+                  labelText: 'Partie těla',
+                  prefixIcon: Icon(Icons.person),
+                  border: OutlineInputBorder(),
+                ),
+                items: BodyParts.all.map((bodyPart) {
+                  return DropdownMenuItem(
+                    value: bodyPart,
+                    child: Text(BodyParts.getCzechName(bodyPart)),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _selectedBodyPart = value;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 24),
+
+              // Tlačítka
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
+                      child: const Text('Zrušit'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _isSubmitting ? null : _submitExercise,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: _isSubmitting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Přidat'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

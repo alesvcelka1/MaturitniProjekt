@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/database_service.dart';
 
 /// Dialog pro výběr cviku z databáze
@@ -10,43 +11,7 @@ class ExerciseSelectorDialog extends StatefulWidget {
 }
 
 class _ExerciseSelectorDialogState extends State<ExerciseSelectorDialog> {
-  List<Map<String, dynamic>> _allExercises = [];
-  List<Map<String, dynamic>> _filteredExercises = [];
-  bool _isLoading = true;
   String _searchQuery = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadExercises();
-  }
-
-  Future<void> _loadExercises() async {
-    final exercises = await DatabaseService.getAllExercises();
-    setState(() {
-      _allExercises = exercises;
-      _filteredExercises = exercises;
-      _isLoading = false;
-    });
-  }
-
-  void _applyFilters() {
-    setState(() {
-      _filteredExercises = _allExercises.where((exercise) {
-        // Filtr podle vyhledávání
-        if (_searchQuery.isNotEmpty) {
-          final name = (exercise['name'] as String? ?? '').toLowerCase();
-          final bodyPart = (exercise['bodyPart'] as String? ?? '').toLowerCase();
-          if (!name.contains(_searchQuery.toLowerCase()) &&
-              !bodyPart.contains(_searchQuery.toLowerCase())) {
-            return false;
-          }
-        }
-
-        return true;
-      }).toList();
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -92,54 +57,89 @@ class _ExerciseSelectorDialogState extends State<ExerciseSelectorDialog> {
                 setState(() {
                   _searchQuery = value;
                 });
-                _applyFilters();
               },
             ),
             const SizedBox(height: 16),
 
-            // Results count
-            Text(
-              'Nalezeno ${_filteredExercises.length} cviků',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // Exercise list
+            // Exercise list from Firestore
             Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _filteredExercises.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.fitness_center, size: 64, color: Colors.grey[400]),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Žádné cviky nenalezeny',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Zkuste změnit filtry',
-                                style: TextStyle(color: Colors.grey[500]),
-                              ),
-                            ],
+              child: StreamBuilder<QuerySnapshot>(
+                stream: DatabaseService.getExercisesStream(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text('Chyba: ${snapshot.error}'),
+                    );
+                  }
+
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final allExercises = snapshot.data!.docs.map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    data['id'] = doc.id;
+                    return data;
+                  }).toList();
+
+                  // Filtrování podle vyhledávání
+                  final filteredExercises = allExercises.where((exercise) {
+                    if (_searchQuery.isEmpty) return true;
+                    
+                    final name = (exercise['name'] as String? ?? '').toLowerCase();
+                    final bodyPart = (exercise['bodyPart'] as String? ?? '').toLowerCase();
+                    
+                    return name.contains(_searchQuery.toLowerCase()) ||
+                        bodyPart.contains(_searchQuery.toLowerCase());
+                  }).toList();
+
+                  if (filteredExercises.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.fitness_center, size: 64, color: Colors.grey[400]),
+                          const SizedBox(height: 16),
+                          Text(
+                            _searchQuery.isEmpty 
+                                ? 'Žádné cviky v databázi' 
+                                : 'Žádné cviky nenalezeny',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.grey[600],
+                            ),
                           ),
-                        )
-                      : ListView.builder(
-                          itemCount: _filteredExercises.length,
+                        ],
+                      ),
+                    );
+                  }
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Results count
+                      Text(
+                        'Nalezeno ${filteredExercises.length} cviků',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      // List
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: filteredExercises.length,
                           itemBuilder: (context, index) {
-                            final exercise = _filteredExercises[index];
+                            final exercise = filteredExercises[index];
                             return _buildExerciseCard(exercise);
                           },
                         ),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
           ],
         ),
