@@ -353,14 +353,12 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
   void _showWorkoutBottomSheet(BuildContext context, {String? workoutId, Map<String, dynamic>? initialData}) {
     final workoutNameController = TextEditingController(text: initialData?['workout_name'] ?? '');
     final descriptionController = TextEditingController(text: initialData?['description'] ?? '');
-    final durationController = TextEditingController(text: (initialData?['estimated_duration'] ?? 30).toString());
     
     List<String> selectedClientIds = List<String>.from(initialData?['client_ids'] ?? []);
     List<Map<String, dynamic>> exercises = List<Map<String, dynamic>>.from(initialData?['exercises'] ?? []);
     
     // Pro naplánování tréninku
     DateTime? selectedDate;
-    TimeOfDay? selectedTime;
 
     showModalBottomSheet(
       context: context,
@@ -415,20 +413,6 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
                       ),
                     ),
                     maxLines: 2,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Odhadovaná doba
-                  TextField(
-                    controller: durationController,
-                    decoration: InputDecoration(
-                      labelText: 'Odhadovaná doba (minuty)',
-                      hintText: '30',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    keyboardType: TextInputType.number,
                   ),
                   const SizedBox(height: 24),
 
@@ -535,33 +519,11 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: selectedDate == null ? null : () async {
-                                    final time = await showTimePicker(
-                                      context: context,
-                                      initialTime: selectedTime ?? TimeOfDay.now(),
-                                    );
-                                    if (time != null) {
-                                      setSheetState(() => selectedTime = time);
-                                    }
-                                  },
-                                  icon: const Icon(Icons.access_time, size: 18),
-                                  label: Text(
-                                    selectedTime != null
-                                        ? '${selectedTime!.hour}:${selectedTime!.minute.toString().padLeft(2, '0')}'
-                                        : 'Čas',
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                ),
-                              ),
                               if (selectedDate != null)
                                 IconButton(
                                   onPressed: () {
                                     setSheetState(() {
                                       selectedDate = null;
-                                      selectedTime = null;
                                     });
                                   },
                                   icon: const Icon(Icons.clear, size: 18),
@@ -572,7 +534,7 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
                           if (selectedDate != null) ...[
                             const SizedBox(height: 8),
                             Text(
-                              'Trénink bude automaticky přiřazen vybraným klientům na ${selectedDate!.day}.${selectedDate!.month}.${selectedDate!.year}${selectedTime != null ? ' v ${selectedTime!.hour}:${selectedTime!.minute.toString().padLeft(2, '0')}' : ''}',
+                              'Trénink bude automaticky přiřazen vybraným klientům na ${selectedDate!.day}.${selectedDate!.month}.${selectedDate!.year}',
                               style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                             ),
                           ],
@@ -601,10 +563,8 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
                               workoutNameController.text.trim(),
                               descriptionController.text.trim(),
                               exercises,
-                              int.tryParse(durationController.text) ?? 30,
                               selectedClientIds,
                               selectedDate,
-                              selectedTime,
                             );
                           },
                           style: ElevatedButton.styleFrom(
@@ -853,10 +813,8 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
     String workoutName,
     String description,
     List<Map<String, dynamic>> exercises,
-    int estimatedDuration,
     List<String> clientIds,
     DateTime? scheduledDate,
-    TimeOfDay? scheduledTime,
   ) async {
     final currentUser = FirebaseAuth.instance.currentUser;
     
@@ -890,7 +848,6 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
         'workout_name': workoutName,
         'description': description,
         'exercises': exercises,
-        'estimated_duration': estimatedDuration,
         'created_at': FieldValue.serverTimestamp(),
       };
 
@@ -916,16 +873,12 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
 
       // Pokud je vybrané datum, naplánuj trénink pro každého klienta
       if (scheduledDate != null && clientIds.isNotEmpty) {
-        DateTime finalDateTime = scheduledDate;
-        if (scheduledTime != null) {
-          finalDateTime = DateTime(
-            scheduledDate.year,
-            scheduledDate.month,
-            scheduledDate.day,
-            scheduledTime.hour,
-            scheduledTime.minute,
-          );
-        }
+        // Použij pouze datum (bez času)
+        final finalDateTime = DateTime(
+          scheduledDate.year,
+          scheduledDate.month,
+          scheduledDate.day,
+        );
 
         for (final clientId in clientIds) {
           await DatabaseService.scheduleWorkout(
@@ -1020,7 +973,6 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
   void _showWorkoutDetailDialog(BuildContext context, String workoutId, Map<String, dynamic> data) {
     final workoutName = data['workout_name'] ?? 'Bez názvu';
     final description = data['description'] ?? '';
-    final estimatedDuration = data['estimated_duration'] ?? 0;
     final exercises = List<Map<String, dynamic>>.from(data['exercises'] ?? []);
     final clientIds = List<String>.from(data['client_ids'] ?? []);
 
@@ -1055,10 +1007,6 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
               // Stats
               Row(
                 children: [
-                  Icon(Icons.timer, size: 16, color: Colors.grey[600]),
-                  const SizedBox(width: 4),
-                  Text('$estimatedDuration min'),
-                  const SizedBox(width: 16),
                   Icon(Icons.people, size: 16, color: Colors.grey[600]),
                   const SizedBox(width: 4),
                   Text('${clientIds.length} klientů'),
@@ -1351,16 +1299,9 @@ class _WorkoutsPageState extends State<WorkoutsPage> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '${data['estimated_duration'] ?? 0} min',
+                        '${(data['exercises'] as List?)?.length ?? 0} cviků',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        '${(data['exercises'] as List?)?.length ?? 0} cviků',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
                         ),
                       ),
                     ],

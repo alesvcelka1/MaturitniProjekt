@@ -241,7 +241,6 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
   Widget _buildExerciseCard(Map<String, dynamic> exercise) {
     final name = exercise['name']?.toString() ?? 'Neznámý cvik';
     final bodyPart = exercise['bodyPart']?.toString() ?? 'Nezadáno';
-    final exerciseId = exercise['id']?.toString() ?? '';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -251,7 +250,6 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
       ),
       child: InkWell(
         onTap: () => _showExerciseDetailDialog(exercise),
-        onLongPress: () => _showDeleteConfirmDialog(exerciseId, name),
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -304,16 +302,26 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
                   ],
                 ),
               ),
-
-              // Delete button
-              IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-                onPressed: () => _showDeleteConfirmDialog(exerciseId, name),
-                tooltip: 'Smazat cvik',
-              ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showEditExerciseDialog(Map<String, dynamic> exercise) {
+    final exerciseId = exercise['id'] as String? ?? '';
+    final currentName = exercise['name'] as String? ?? '';
+    final currentBodyPart = exercise['bodyPart'] as String? ?? '';
+    final currentGifPath = exercise['gifPath'] as String? ?? '';
+
+    showDialog(
+      context: context,
+      builder: (context) => _EditExerciseDialog(
+        exerciseId: exerciseId,
+        currentName: currentName,
+        currentBodyPart: currentBodyPart,
+        currentGifPath: currentGifPath,
       ),
     );
   }
@@ -450,6 +458,27 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
                             child: OutlinedButton.icon(
                               onPressed: () {
                                 Navigator.pop(context);
+                                _showEditExerciseDialog(exercise);
+                              },
+                              icon: const Icon(Icons.edit, color: Colors.blue),
+                              label: const Text(
+                                'Upravit',
+                                style: TextStyle(color: Colors.blue),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                side: const BorderSide(color: Colors.blue),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                Navigator.pop(context);
                                 _showDeleteConfirmDialog(exerciseId, name);
                               },
                               icon: const Icon(Icons.delete, color: Colors.red),
@@ -466,7 +495,7 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: ElevatedButton(
                               onPressed: () => Navigator.pop(context),
@@ -711,6 +740,222 @@ class _AddExerciseDialogState extends State<_AddExerciseDialog> {
                               ),
                             )
                           : const Text('Přidat'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Dialog pro úpravu cviku
+class _EditExerciseDialog extends StatefulWidget {
+  final String exerciseId;
+  final String currentName;
+  final String currentBodyPart;
+  final String currentGifPath;
+
+  const _EditExerciseDialog({
+    required this.exerciseId,
+    required this.currentName,
+    required this.currentBodyPart,
+    required this.currentGifPath,
+  });
+
+  @override
+  State<_EditExerciseDialog> createState() => _EditExerciseDialogState();
+}
+
+class _EditExerciseDialogState extends State<_EditExerciseDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameController;
+  late final TextEditingController _gifPathController;
+  late String _selectedBodyPart;
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.currentName);
+    _gifPathController = TextEditingController(text: widget.currentGifPath);
+    _selectedBodyPart = widget.currentBodyPart.isNotEmpty 
+        ? widget.currentBodyPart 
+        : BodyParts.chest;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _gifPathController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submitUpdate() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final success = await DatabaseService.updateExercise(
+        exerciseId: widget.exerciseId,
+        name: _nameController.text.trim(),
+        gifPath: _gifPathController.text.trim(),
+        bodyPart: _selectedBodyPart,
+      );
+
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Cvik byl úspěšně upraven'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.of(context).pop();
+        } else {
+          throw Exception('Úprava cviku selhala');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Chyba při úpravě: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 500),
+        padding: const EdgeInsets.all(24),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.edit, color: Colors.blue, size: 28),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Upravit cvik',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // Název cviku
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Název cviku',
+                  prefixIcon: Icon(Icons.fitness_center),
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Zadej název cviku';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // GIF cesta
+              TextFormField(
+                controller: _gifPathController,
+                decoration: const InputDecoration(
+                  labelText: 'GIF cesta (volitelné)',
+                  hintText: 'assets/gifs/bench_press.gif',
+                  prefixIcon: Icon(Icons.image),
+                  border: OutlineInputBorder(),
+                  helperText: 'Nech prázdné pokud nemáš GIF soubor',
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Partie těla
+              DropdownButtonFormField<String>(
+                value: _selectedBodyPart,
+                decoration: const InputDecoration(
+                  labelText: 'Partie těla',
+                  prefixIcon: Icon(Icons.person),
+                  border: OutlineInputBorder(),
+                ),
+                items: BodyParts.all.map((bodyPart) {
+                  return DropdownMenuItem(
+                    value: bodyPart,
+                    child: Text(BodyParts.getCzechName(bodyPart)),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _selectedBodyPart = value;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 24),
+
+              // Tlačítka
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
+                      child: const Text('Zrušit'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _isSubmitting ? null : _submitUpdate,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: _isSubmitting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Uložit změny'),
                     ),
                   ),
                 ],
