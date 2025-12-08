@@ -331,7 +331,7 @@ class _ExercisesManagementPageState extends State<ExercisesManagementPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Smazat cvik?'),
-        content: Text('Opravdu chceš smazat cvik "$exerciseName"?\n\nTato akce je nevratná.'),
+        content: Text('Opravdu chcete smazat cvik "$exerciseName"?\n\nTato akce je nevratná.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),

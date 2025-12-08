@@ -30,23 +30,6 @@ class AppConfig {
   static const int weekStartDay = 1; // Pondělí
   static const int daysInWeek = 7;
   static const int topClientsLimit = 5;
-  static const int defaultEstimatedDuration = 30; // minuty
-  static const int targetWorkoutsPerWeek = 5;
-}
-
-/// UI konstanty - spacing a rozměry
-class AppSpacing {
-  static const double small = 8.0;
-  static const double medium = 16.0;
-  static const double large = 20.0;
-  static const double xlarge = 24.0;
-}
-
-/// UI konstanty - zaoblení rohů
-class AppRadius {
-  static const double small = 8.0;
-  static const double medium = 16.0;
-  static const double large = 24.0;
 }
 
 /// Velikosti ikon

@@ -15,61 +15,6 @@ class DatabaseService {
   static CollectionReference get scheduledWorkouts => _firestore.collection('scheduled_workouts');
   static CollectionReference get exercises => _firestore.collection('exercises');
 
-  /// Vytvoří profil uživatele v databázi
-  static Future<void> createUserProfile(User user, {String role = 'client'}) async {
-    try {
-      await users.doc(user.uid).set({
-        'email': user.email,
-        'display_name': user.displayName ?? user.email?.split('@')[0],
-        'role': role,
-        'created_at': FieldValue.serverTimestamp(),
-        'photo_url': user.photoURL,
-        'last_login': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-      
-      AppLogger.success('Profil uživatele vytvořen: ${user.uid}');
-    } catch (e) {
-      AppLogger.error('Chyba při vytváření profilu uživatele', e);
-      rethrow;
-    }
-  }
-
-  /// Získá tréninky pro konkrétního trenéra
-  static Stream<QuerySnapshot> getTrainerWorkouts(String trainerId) {
-    return workouts
-        .where('trainer_id', isEqualTo: trainerId)
-        // Dočasně bez orderBy - vyžaduje index
-        // .orderBy('created_at', descending: true)
-        .snapshots();
-  }
-
-  /// Získá tréninky přiřazené klientovi
-  static Stream<QuerySnapshot> getClientWorkouts(String clientEmail) {
-    return workouts
-        .where('client_ids', arrayContains: clientEmail)
-        // Dočasně bez orderBy - vyžaduje index
-        // .orderBy('created_at', descending: true)
-        .snapshots();
-  }
-
-  /// Získá všechny klienty pro multi-select
-  static Future<List<Map<String, dynamic>>> getAllClients() async {
-    try {
-      final snapshot = await users
-          .where('role', isEqualTo: UserRoles.client)
-          .get();
-      
-      return snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        data['id'] = doc.id;
-        return data;
-      }).toList();
-    } catch (e) {
-      
-      return [];
-    }
-  }
-
   /// Uloží dokončený trénink do databáze
   static Future<void> saveCompletedWorkout({
     required String workoutId,
@@ -428,45 +373,6 @@ class DatabaseService {
   /// Získá stream všech cviků
   static Stream<QuerySnapshot> getExercisesStream() {
     return exercises.orderBy('name').snapshots();
-  }
-
-  /// Načte konkrétní cvik podle ID
-  static Future<Map<String, dynamic>?> getExerciseById(String exerciseId) async {
-    try {
-      final doc = await exercises.doc(exerciseId).get();
-      if (!doc.exists) return null;
-      
-      final data = doc.data() as Map<String, dynamic>;
-      data['id'] = doc.id;
-      return data;
-    } catch (e) {
-      AppLogger.error('Chyba při načítání cviku $exerciseId', e);
-      return null;
-    }
-  }
-
-  /// Získá seznam všech partií těla
-  static Future<List<String>> getBodyParts() async {
-    return ['chest', 'back', 'legs', 'shoulders', 'arms', 'core'];
-  }
-
-  /// Filtruje cviky podle partie těla
-  static Future<List<Map<String, dynamic>>> getExercisesByBodyPart(String bodyPart) async {
-    try {
-      final snapshot = await exercises
-          .where('bodyPart', isEqualTo: bodyPart)
-          .orderBy('name')
-          .get();
-      
-      return snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        data['id'] = doc.id;
-        return data;
-      }).toList();
-    } catch (e) {
-      AppLogger.error('Chyba při filtrování cviků podle $bodyPart', e);
-      return [];
-    }
   }
 
   /// Přidá nový cvik do Firestore
