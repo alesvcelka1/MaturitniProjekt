@@ -1,0 +1,915 @@
+% ŠABLONA PRO PSANÍ ZÁVĚREČNÉ STUDIJNÍ PRÁCE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Autor: Jakub Dokulil (kubadokulil99@gmail.com)
+% Tato šablona byla vytvořena tak, aby pomocí ní mohli v systému LaTeX soutěžící sázet své práce a zároveň odpovídala požadavkům na formátování vyplývajícím z wordové šablony umístěné na webu soc.cz.
+%
+\documentclass[12pt, a4paper,
+oneside,      %% -- odkomentujte, pokud chcete svou práci mít pouze jednostrannou, mezera pro hřbet pak automaticky bude pouze na levé straně
+%twoside,        %% -- pro oboustranné práce, mezera pro hřbet následně střídá strany.
+%openright
+]{report}
+
+% --- odstraneni zbytkoveho textu "superiorSup" a pod. ---
+%\AtBeginDocument{%
+	% pojistka proti nechtenemu textu nactenemu z aux/toc
+%	\immediate\write16{(cleaning stray figureversions output...)}%
+%	\clearpage
+%	\thispagestyle{empty}
+	% uplne vyprazdneni vseho, co by se objevilo mimo hlavni text
+%	\let\superiorSup\relax
+%	\let\textOsF\relax
+%	\let\textTOsF\relax
+%	\let\liningLF\relax
+%	\let\liningTLF\relax
+%	\let\tabularTab\relax
+%	\let\proportionalProp\relax
+%	\let\tabularmath\relax
+%	\let\proportionalmath\relax
+%	\let\fontspechyperref\relax
+	% zajisteni, ze se nic nezobrazi pred titulni stranou
+%	\null
+%	\newpage
+%}
+%% Nutné balíčky a nastavení
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Proměnné
+\newcommand\obor{INFORMAČNÍ TECHNOLOGIE} %% -- napiš číslo a název tvého oboru
+\newcommand\kodOboru{18-20-M/01} %% -- napiš číslo a název tvého oboru
+\newcommand\zamereni{se zaměřením na počítačové sítě a programování} %% -- napiš číslo a název tvého oboru
+\newcommand\skola{Střední škola průmyslová a umělecká, Opava} %% vyplň název školy
+\newcommand\trida{IT4} %% vyplň jméno svého konzultanta
+\newcommand\jmenoAutora{Aleš Včelka}  %% vyplň své jméno
+\newcommand\skolniRok{2025/26} %% vyplň rok
+\newcommand\datumOdevzdani{1. 1. 2026} %% vyplň rok
+\newcommand\nazevPrace{Správa tréninků - FitLog} %% vyplň název své práce
+
+\title{\nazevPrace} %% -- Název tvé práce
+\author{\jmenoAutora} %% -- tvé jméno
+\date{\datumOdevzdani} %% -- rok, kdy píšeš SOČku
+
+\usepackage[top=2.5cm, bottom=2.5cm, left=3.5cm, right=1.5cm]{geometry} %% nastaví okraje, left -- vnitřní okraj, right -- vnější okraj
+
+\usepackage[czech]{babel} %% balík babel pro sazbu v češtině
+\usepackage[utf8]{inputenc} %% balíky pro kódování textu
+\usepackage[T1]{fontenc}
+\usepackage{cmap} %% balíček zajišťující, že vytvořené PDF bude prohledávatelné a kopírovatelné
+
+\usepackage{graphicx} %% balík pro vkládání obrázků
+
+\usepackage{subcaption} %% balíček pro vkládání podobrázků
+
+\usepackage{hyperref} %% balíček, který v PDF vytváří odkazy
+
+\linespread{1.25} %% řádkování
+\setlength{\parskip}{0.5em} %% odsazení mezi odstavci
+
+
+\usepackage[pagestyles]{titlesec} %% balíček pro úpravu stylu kapitol a sekcí
+\titleformat{\chapter}[block]{\scshape\bfseries\LARGE}{\thechapter}{10pt}{\vspace{0pt}}[\vspace{-22pt}]
+\titleformat{\section}[block]{\scshape\bfseries\Large}{\thesection}{10pt}{\vspace{0pt}}
+\titleformat{\subsection}[block]{\bfseries\large}{\thesubsection}{10pt}{\vspace{0pt}}
+
+
+\usepackage{tocloft} % Balíček umožní přizpůsobit vzhled tabulky obsahu
+\setlength{\cftbeforechapskip}{0pt}  % Menší rozestup pro kapitoly
+\setlength{\cftbeforesecskip}{0pt}   % Menší rozestup pro sekce
+
+\setcounter{secnumdepth}{2}
+\setcounter{tocdepth}{1}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\renewcommand{\headrulewidth}{0.025pt}
+
+\usepackage{booktabs}
+
+\usepackage{url}
+
+%% Balíčky co se můžou hodit :) 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage{pdfpages} %% Balíček umožňující vkládat stránky z PDF souborů, 
+
+\usepackage{upgreek} %% Balíček pro sazbu stojatých řeckých písmen, třeba u jednotky mikrometr. Například stojaté mí: \upmu, stojaté pí: \uppi
+
+\usepackage{amsmath}    %% Balíčky amsmath a amsfonts 
+\usepackage{amsfonts}   %% pro sazbu matematických symbolů
+\usepackage{esint}     %% pro sazbu různých integrálů (např \oiint)
+\usepackage{mathrsfs}
+\usepackage{helvet} % Helvet font
+\usepackage{mathptmx} % Times New Roman
+\usepackage{tikz}
+\usetikzlibrary{positioning}
+\makeatletter
+\@namedef{ver@figureversions.sty}{9999/99/99}
+\newcommand{\DeclareFigureVersion}[2]{}
+\newcommand{\figureversion}[1]{}
+\makeatother
+
+
+\makeatletter
+\providecommand{\superiorSup}{}
+\providecommand{\textOsF}{}
+\providecommand{\textTOsF}{}
+\providecommand{\liningLF}{}
+\providecommand{\liningTLF}{}
+\providecommand{\tabularTab}{}
+\providecommand{\proportionalProp}{}
+\makeatother
+\makeatletter
+\providecommand{\superiorSup}{}
+\providecommand{\textOsF}{}
+\providecommand{\textTOsF}{}
+\providecommand{\liningLF}{}
+\providecommand{\liningTLF}{}
+\providecommand{\tabularTab}{}
+\providecommand{\proportionalProp}{}
+\providecommand{\tabularmath}{}
+\providecommand{\proportionalmath}{}
+\makeatother
+
+%\usepackage{Oswald} % Oswald font
+
+
+%% makra pro sazbu matematiky
+\newcommand{\dif}{\mathrm{d}} %% makro pro sazbu diferenciálu, místo toho
+%% abych musel psát '\mathrm{d}' mi stačí napsat '\dif' což je mnohem 
+%% kratší a mohu si tak usnadnit práci
+
+\usepackage{listings}
+\usepackage{xcolor}
+
+\renewcommand{\lstlistingname}{Kód}% Listing -> Algorithm
+\renewcommand{\lstlistlistingname}{Seznam programových kódů}% List of Listings -> List of Algorithms
+
+%% Definice 
+\lstdefinelanguage{JavaScript}{
+	morekeywords=[1]{break, continue, delete, else, for, function, if, in,
+		new, return, this, typeof, var, void, while, with},
+	% Literals, primitive types, and reference types.
+	morekeywords=[2]{false, null, true, boolean, number, undefined,
+		Array, Boolean, Date, Math, Number, String, Object},
+	% Built-ins.
+	morekeywords=[3]{eval, parseInt, parseFloat, escape, unescape},
+	sensitive,
+	morecomment=[s]{/*}{*/},
+	morecomment=[l]//,
+	morecomment=[s]{/**}{*/}, % JavaDoc style comments
+	morestring=[b]',
+	morestring=[b]"
+}[keywords, comments, strings]
+
+
+\lstdefinelanguage[ECMAScript2015]{JavaScript}[]{JavaScript}{
+	morekeywords=[1]{await, async, case, catch, class, const, default, do,
+		enum, export, extends, finally, from, implements, import, instanceof,
+		let, static, super, switch, throw, try},
+	morestring=[b]` % Interpolation strings.
+}
+
+\lstalias[]{ES6}[ECMAScript2015]{JavaScript}
+
+% Nastavení barev
+% Requires package: color.
+\definecolor{mediumgray}{rgb}{0.3, 0.4, 0.4}
+\definecolor{mediumblue}{rgb}{0.0, 0.0, 0.8}
+\definecolor{forestgreen}{rgb}{0.13, 0.55, 0.13}
+\definecolor{darkviolet}{rgb}{0.58, 0.0, 0.83}
+\definecolor{royalblue}{rgb}{0.25, 0.41, 0.88}
+\definecolor{crimson}{rgb}{0.86, 0.8, 0.24}
+
+% Nastavení pro Python
+\lstdefinestyle{Python}{
+	language=Python,
+	backgroundcolor=\color{white},
+	basicstyle=\ttfamily,
+	breakatwhitespace=false,
+	breaklines=false,
+	captionpos=b,
+	columns=fullflexible,
+	commentstyle=\color{mediumgray}\upshape,
+	emph={},
+	emphstyle=\color{crimson},
+	extendedchars=true,  % requires inputenc
+	fontadjust=true,
+	frame=single,
+	identifierstyle=\color{black},
+	keepspaces=true,
+	keywordstyle=\color{mediumblue},
+	keywordstyle={[2]\color{darkviolet}},
+	keywordstyle={[3]\color{royalblue}},
+	literate=%
+	{á}{{\'a}}1 {č}{{\v{c}}}1 {ď}{{\v{d}}}1 {é}{{\'e}}1 {ě}{{\v{e}}}1
+	{í}{{\'i}}1 {ň}{{\v{n}}}1 {ó}{{\'o}}1 {ř}{{\v{r}}}1 {š}{{\v{s}}}1
+	{ť}{{\v{t}}}1 {ú}{{\'u}}1 {ů}{{\r{u}}}1 {ý}{{\'y}}1 {ž}{{\v{z}}}1,		
+	numbers=left,
+	numbersep=5pt,
+	numberstyle=\tiny\color{black},
+	rulecolor=\color{black},
+	showlines=true,
+	showspaces=false,
+	showstringspaces=false,
+	showtabs=false,
+	stringstyle=\color{forestgreen},
+	tabsize=2,
+	title=\lstname,
+	upquote=true  % requires textcomp	
+}
+
+
+\lstdefinestyle{JSES6Base}{
+	backgroundcolor=\color{white},
+	basicstyle=\ttfamily,
+	breakatwhitespace=false,
+	breaklines=false,
+	captionpos=b,
+	columns=fullflexible,
+	commentstyle=\color{mediumgray}\upshape,
+	emph={},
+	emphstyle=\color{crimson},
+	extendedchars=true,  % requires inputenc
+	fontadjust=true,
+	frame=single,
+	identifierstyle=\color{black},
+	keepspaces=true,
+	keywordstyle=\color{mediumblue},
+	keywordstyle={[2]\color{darkviolet}},
+	keywordstyle={[3]\color{royalblue}},
+	literate=%
+	{á}{{\'a}}1 {č}{{\v{c}}}1 {ď}{{\v{d}}}1 {é}{{\'e}}1 {ě}{{\v{e}}}1
+	{í}{{\'i}}1 {ň}{{\v{n}}}1 {ó}{{\'o}}1 {ř}{{\v{r}}}1 {š}{{\v{s}}}1
+	{ť}{{\v{t}}}1 {ú}{{\'u}}1 {ů}{{\r{u}}}1 {ý}{{\'y}}1 {ž}{{\v{z}}}1,		
+	numbers=left,
+	numbersep=5pt,
+	numberstyle=\tiny\color{black},
+	rulecolor=\color{black},
+	showlines=true,
+	showspaces=false,
+	showstringspaces=false,
+	showtabs=false,
+	stringstyle=\color{forestgreen},
+	tabsize=2,
+	title=\lstname,
+	upquote=true  % requires textcomp
+}
+
+\lstdefinestyle{JavaScript}{
+	language=JavaScript,
+	style=JSES6Base,
+}
+\lstdefinestyle{ES6}{
+	language=ES6,
+	style=JSES6Base
+}
+
+\setlength{\headheight}{15pt}
+
+\usepackage{fancyhdr}
+\setlength{\headheight}{15pt}
+
+% ===============================
+% Záhlaví a zápatí
+% ===============================
+\fancyhf{}                                % vymazání výchozího obsahu
+\fancyhead[L]{Závěrečná práce}
+\fancyhead[C]{Aleš Včelka IT4}
+\fancyhead[R]{2025/2026}
+\fancyfoot[C]{\thepage}
+
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% Styl pro kapitoly (\chapter)
+\fancypagestyle{plain}{
+	\fancyhf{}
+	\fancyhead[L]{Závěrečná práce}
+	\fancyhead[C]{Aleš Včelka IT4}
+	\fancyhead[R]{2025/2026}
+	\fancyfoot[C]{\thepage}
+	\renewcommand{\headrulewidth}{0.4pt}
+}
+
+
+
+
+%% Začátek dokumentu
+%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+	
+	\pagestyle{empty}
+	\pagenumbering{Roman}
+	\pagenumbering{gobble} % žádné číslování
+	%\clearpage
+	
+	%% Titulní stránka s informacemi
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	
+	{\fontfamily{phv}\selectfont
+		%% Logo školy
+		\begin{figure}[h]
+			\centering
+			\includegraphics[width=0.6\linewidth]{image/logo-skoly.png} 
+		\end{figure}
+		
+		
+		%% Hlavička práce a její název (viz proměnná \nazev prace)
+		%% \sffamily %%% bezpatkové písmo - sans serif
+		{\bfseries %%% písmo na stránce je tučně
+			\begin{center}
+				\vspace{0.025 \textheight}
+				\LARGE{ZÁVĚREČNÁ STUDIJNÍ PRÁCE}\\
+				\large{dokumentace}\\
+				\vspace{0.075 \textheight}
+				\LARGE {\nazevPrace}\\
+			\end{center}  
+		}%%%
+		
+		\begin{figure}[h]
+			\centering
+			\includegraphics[width=0.4\linewidth]{image/FitLog.png} 
+		\end{figure}
+		
+		\vspace{0.02 \textheight}
+		\begin{table}[h!]
+			\begin{tabular}{ll}
+				\textbf{Autor:} & \jmenoAutora\\ 
+				\textbf{Obor:} & \kodOboru { } \obor\\
+				\textbf{} & \zamereni\\
+				\textbf{Třída:} & \trida\\
+				\textbf{Školní rok:} & \skolniRok\\
+			\end{tabular}
+			
+		\end{table}		
+	}
+	
+	\clearpage %% Zalomení dvojstránky
+	
+	%% Stránka obsahující poděkování a prohlášení
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	
+	%% Poděkování - nepovinné
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	
+	\noindent{\large{\bfseries{Poděkování}\\}}
+	\noindent Tímto bych rád poděkoval svým učitelům panu Ing. Petru Grussmannovi a panu Mgr. Marku Lučnému 
+	za jejich odborné vedení, cenné rady a podporu během zpracování této závěrečné práce.
+	
+	\vspace*{0.65\textheight} %% Vertikální mezeru je možné upravit
+	
+	%% Prohlášení - povinné
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	\noindent{\large{\bfseries{Prohlášení}\\}}  %% uprav si koncovky podle toho na jaký rod se cítíš, vypadá to pak lépe :) 
+	\noindent{Prohlašuji, že jsem závěrečnou práci vypracoval samostatně a uvedl veškeré použité 
+		informační zdroje.\\}
+	\noindent{Souhlasím, aby tato studijní práce byla použita k výukovým a prezentačním účelům na Střední průmyslové a umělecké škole v Opavě, Praskova 399/8.}
+	\vfill
+	\noindent{V Opavě \datumOdevzdani\\}
+	\noindent
+	\begin{minipage}{\linewidth}
+		\hspace{9.5cm} 
+		\begin{tabular}{@{}p{6cm}@{}}
+			\dotfill \\
+			Podpis autora
+		\end{tabular}
+	\end{minipage}
+	
+	
+	
+	
+	%% Stránka obsahující abstrakt (anotaci)
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
+	
+	%% Abstrakt v češtině
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	\noindent{\Large{\bfseries{Abstrakt}\\}}
+	\noindent Práce se zabývá návrhem a realizací mobilní aplikace pro správu tréninkových plánů s využitím frameworku Flutter a cloudové platformy Firebase. Cílem aplikace je umožnit efektivní spolupráci mezi osobním trenérem a jeho klientem prostřednictvím přehledného uživatelského rozhraní a jasně strukturovaného systému správy tréninků. Aplikace poskytuje funkcionality pro registraci a autentizaci uživatelů, rozlišení rolí trenér a klient, tvorbu a správu cviků včetně přiřazené svalové partie a animace ve formátu GIF, sestavování tréninkových plánů a jejich následné přiřazení konkrétním klientům. Datový model je realizován pomocí služby Cloud Firestore, kde jsou uloženy informace o uživatelích, cvicích i tréninkových plánech. Součástí práce je také testování funkcionalit aplikace na různých zařízeních a vyhodnocení dosažených výsledků. Výstupem je funkční mobilní aplikace, která představuje základ pro další možné rozšíření v oblasti fitness a personalizovaného tréninku.
+	
+	
+	\vspace{18pt}
+	
+	\noindent{\large{\bfseries Klíčová slova}}\\
+	Flutter, Firebase, mobilní aplikace, tréninkový plán, osobní trenér, klient, autentizace, Cloud Firestore, cviky, GIF animace, fitness aplikace
+	
+	
+	\vspace{18pt}
+	
+	%% Abstrakt v angličtině
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
+	\noindent{\Large{\bfseries{Abstract}}}
+	
+	\noindent This thesis focuses on the design and implementation of a mobile application for managing training plans using the Flutter framework and the Firebase cloud platform. The aim of the application is to enable effective cooperation between a personal trainer and their client through a clear user interface and a well-structured training management system. The application provides functionalities for user registration and authentication, role differentiation between trainer and client, creation and management of exercises including muscle group assignment and GIF animations, construction of training plans, and their subsequent assignment to specific clients. The data model is implemented using Cloud Firestore, where information about users, exercises, and training plans is stored. The thesis also includes testing of the application’s functionalities on various devices and evaluation of the achieved results. The outcome is a functional mobile application that serves as a foundation for further development in the field of fitness and personalized training.
+	
+	
+	\vspace{18pt}
+	
+	\noindent{\large{\bfseries{Keywords}}}
+	Flutter, Firebase, mobile application, training plan, personal trainer, client, authentication, Cloud Firestore, exercises, GIF animations, fitness application
+	
+	
+	
+	%\clearpage %% Zalomení stránky
+	
+	%% Stránka s generovaným obsahem
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
+	
+	\tableofcontents %% Vygeneruje tabulku s obsahem
+	
+	\clearpage
+	
+	\pagenumbering{arabic}
+	\setcounter{page}{1}
+	\pagestyle{fancy}
+	
+	%% Stránka s úvodem - povinná část
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%		
+	\chapter{Úvod}
+	%Tento příkaz vytvoří novou kapitolu s názvem "Úvod" ve vašem dokumentu.
+	%Hvězdička * u příkazu \chapter* znamená, že tato kapitola nebude mít číslo. Ve výsledném dokumentu se tedy objeví jako "Úvod" bez předcházejícího čísla kapitoly, které se obvykle zobrazuje u číslovaných kapitol.
+	%Tento příkaz také znamená, že kapitola se automaticky neobjeví v obsahu, protože LaTeX standardně zahrnuje do obsahu pouze číslované kapitoly.
+	\addcontentsline{toc}{chapter}{Úvod}
+	%Tento příkaz ručně přidává záznam do obsahu.
+	%První parametr toc označuje, že přidáváme záznam do Table of Contents (obsahu).
+	%Druhý parametr chapter specifikuje úroveň záznamu. V tomto případě říkáme, že přidávaný záznam má být považován za kapitolu.
+	%Třetí parametr Úvod je text, který se objeví v obsahu. V tomto případě bude v obsahu zobrazen název "Úvod".	
+	Tato práce se zabývá návrhem a vývojem mobilní aplikace, která je určena pro efektivní správu tréninkových plánů v prostředí online coachingu. V současné době mnoho osobních trenérů komunikuje s klienty prostřednictvím běžných textových zpráv nebo sociálních sítí, kde zasílají tréninky ve formě neorganizovaných poznámek, obrázků či hlasových zpráv. Tento způsob předávání informací je nepřehledný, komplikovaný pro dlouhodobé používání a často vede k tomu, že klient musí jednotlivé části tréninku složitě dohledávat v historiích konverzací. Problematická je i absence centralizované správy, která by umožnila trenérovi plánovat, upravovat a dlouhodobě archivovat tréninky v jednotném systému. Tato situace představuje reálný problém, který výrazně snižuje efektivitu online coachingu.
+	
+	Volba tématu vychází z osobní zkušenosti a pozorování, že kvalitní systém pro správu tréninků může trenérům i klientům výrazně zjednodušit práci. Mnoho trenérů hledá způsob, jak tréninkové plány předávat profesionálněji a přehledněji, a zároveň mít možnost je rychle aktualizovat podle individuálních potřeb klienta. Motivací pro vytvoření tohoto projektu bylo nabídnout moderní mobilní řešení, které využívá známé technologie a umožňuje trenérům spravovat tréninky kdykoliv a odkudkoliv.
+	
+	Cílem práce je navrhnout a vytvořit mobilní aplikaci, která umožní:
+	\begin{itemize}
+		\item registraci a autentizaci uživatelů,
+		\item rozlišení rolí osobní trenér a klient,
+		\item vytváření cviků včetně názvu, cílové svalové partie a GIF animace,
+		\item real time chat mezi trenérem a klientem,
+		\item sestavování tréninkových plánů z dostupných cviků,
+		\item přiřazování tréninkových plánů jednotlivým klientům,
+		\item přehledné zobrazení tréninků pro každého uživatele.
+	\end{itemize}
+	
+	Pro realizaci aplikace byl zvolen framework Flutter umožňující multiplatformní vývoj a cloudová platforma Firebase, která poskytuje autentizaci, správu dat a databázové úložiště Cloud Firestore. Tyto technologie zajišťují stabilní běh aplikace, jednoduchou správu dat v reálném čase a možnost dalšího rozšiřování.
+	\section{Počáteční zkušenosti a inspirace}
+	
+	Před zahájením vývoje aplikace FitLog jsem neměl žádné předchozí zkušenosti s tvorbou mobilních aplikací ani s frameworkem Flutter. Veškeré potřebné znalosti jsem získal postupně během práce na projektu formou samostudia, sledováním oficiální dokumentace a praktickým zkoušením různých řešení. Tento proces zahrnoval seznámení s jazykem Dart, principy stavového řízení, integrací Firebase a návrhem architektury aplikace.
+	
+	Při návrhu uživatelského rozhraní a celkové koncepce aplikace jsem se inspiroval aplikací \textbf{Strong Workout Tracker}, která je známá svou jednoduchostí, přehledností a intuitivním ovládáním. Její minimalistický přístup k práci s tréninky mi poskytl užitečný referenční rámec pro vytvoření moderní a snadno použitelné aplikace FitLog.
+	
+	
+	
+	%Tipy k psaní úvodu
+	%Je povinný, nadpis neměňte, rozsah - max. 1 strana. 
+	%Tato část práce obsahuje: 
+	%* náhled do řešené problematiky, zdůvodnění volby problematiky, 
+	%* předem definované cíle práce, 
+	%* motivaci pro další čtení textu včetně stručného uvedení obsahu následujících kapitol 
+	
+	
+	\chapter{Využité technologie}
+	
+	Tato kapitola popisuje hlavní technologie, které byly použity při vývoji mobilní aplikace FitLog. Jedná se především o framework Flutter a cloudovou platformu Firebase, jejichž kombinace umožňuje rychlý vývoj, multiplatformní provoz a bezpečnou správu dat v reálném čase. Cílem této kapitoly je vysvětlit, jaké technologie byly zvoleny, proč byly použity a jakým způsobem se podílejí na celkové funkčnosti aplikace.
+	
+	\section{Flutter}
+	
+	Flutter je open–source framework vyvinutý společností Google, určený pro vývoj multiplatformních aplikací z jednoho zdrojového kódu. Umožňuje vytvářet aplikace pro Android, iOS, web i desktop pomocí společného jádra, což výrazně zjednodušuje vývoj i údržbu aplikace.
+	
+	V projektu FitLog je Flutter využit k tvorbě kompletního uživatelského rozhraní, navigace mezi obrazovkami a integrace s backendovými službami přes Firebase SDK.
+	
+	\subsection{Výhody využití Flutteru}
+	
+	Při vývoji fitness aplikace jsou kladeny vysoké požadavky na přehledné rozhraní, rychlou odezvu, přehledné formuláře a možnost prezentovat vizuální obsah (např. GIFy cviků). Flutter tyto požadavky splňuje díky následujícím vlastnostem:
+	
+	\begin{itemize}
+		\item \textbf{Multiplatformní vývoj} – možnost vytvářet aplikaci pro více platforem z jednoho zdrojového kódu.
+		\item \textbf{Hot Reload} – okamžitá vizuální zpětná vazba při úpravách kódu, která zrychluje vývoj.
+		\item \textbf{Bohatá knihovna widgetů} – umožňuje tvorbu moderního, responzivního a vizuálně konzistentního UI.
+		\item \textbf{Vysoký výkon} – Flutter je kompilován do nativního kódu, což zajišťuje plynulost aplikace.
+		\item \textbf{Podpora animací a multimédií} – vhodné pro animace a ukázky jednotlivých cviků.
+		\item \textbf{Snadná integrace třetích stran} – například Firebase Authentication nebo Cloud Firestore.
+	\end{itemize}
+	
+	\section{Programovací jazyk Dart}
+	
+	Dart je objektově orientovaný programovací jazyk úzce spojený s Flutterem. Je navržený tak, aby byl efektivní, přehledný a dobře optimalizovaný pro moderní mobilní aplikace.
+	
+	V aplikaci FitLog je využit zejména pro:
+	
+	\begin{itemize}
+		\item tvorbu datových modelů (uživatel, cvik, tréninkový plán),
+		\item implementaci aplikační logiky,
+		\item práci s API a komunikaci s Firebase,
+		\item asynchronní načítání dat pomocí \texttt{async/await} a streamů.
+	\end{itemize}
+	
+	Dart v kombinaci s Flutterem poskytuje stabilní základ pro rychlý a efektivní vývoj.
+	
+	\section{Firebase}
+	
+	Firebase je komplexní cloudová platforma poskytující nástroje pro backend mobilních i webových aplikací. FitLog využívá několik hlavních komponent Firebase, díky nimž není nutné implementovat vlastní serverovou infrastrukturu.
+	
+	\subsection{Firebase Authentication}
+	
+	Firebase Authentication slouží k řízení přístupu do aplikace. V projektu FitLog poskytuje:
+	
+	\begin{itemize}
+		\item registraci uživatelů pomocí e-mailu a hesla,
+		\item přihlášení a odhlášení uživatelů,
+		\item bezpečné uchování přihlašovacích údajů v cloudu.
+	\end{itemize}
+	
+	Po přihlášení je uživatelovi načtena příslušná role (trenér nebo klient) z databáze, čímž se automaticky nastaví, která část aplikace je pro něj dostupná.
+	
+	\subsection{Cloud Firestore}
+	
+	Cloud Firestore je NoSQL databáze založená na dokumentech. Umožňuje ukládání strukturovaných dat a jejich synchronizaci v reálném čase. V aplikaci FitLog je využit pro:
+	
+	\begin{itemize}
+		\item uchovávání uživatelských účtů a rolí,
+		\item seznamy cviků,
+		\item tvorbu a editaci tréninkových plánů,
+		\item přiřazování plánů jednotlivým klientům.
+	\end{itemize}
+	
+	Velkou výhodou je automatická synchronizace dat mezi zařízeními, díky které může trenér upravit tréninkový plán a klient jej obratem vidí ve své aplikaci.
+	
+	\subsection{Firebase Storage}
+	
+	Firebase Storage slouží k ukládání souborů – zejména obrázků a GIFů znázorňujících jednotlivé cviky. Tyto soubory jsou následně načítány přímo v aplikaci.
+	
+	Mezi hlavní výhody patří:
+	
+	\begin{itemize}
+		\item jednoduchá integrace s ostatními Firebase službami,
+		\item rychlé a bezpečné ukládání multimediálních souborů,
+		\item automatické vytváření veřejných i chráněných odkazů.
+	\end{itemize}
+	
+	\section{Vývojové prostředí a nástroje}
+	
+	Pro samotný vývoj aplikace byly využity následující nástroje:
+	
+	\begin{itemize}
+		\item \textbf{Android Studio / Visual Studio Code} – hlavní integrovaná vývojová prostředí používaná pro psaní kódu, ladění a práci s emulátory.
+		
+	\end{itemize}
+	
+	\bigskip
+	
+	Tato kombinace technologií poskytla pevný základ pro vytvoření moderní, stabilní a uživatelsky přívětivé aplikace FitLog, která efektivně propojuje trenéry a jejich klienty v prostředí online coachingu.
+	
+	\clearpage
+	
+	\chapter{Základní struktura aplikace FitLog}
+	\label{sec:zakladni_struktura}
+	
+	Tato kapitola se zabývá základní strukturou mobilní aplikace FitLog a popisuje hlavní části projektu, ze kterých se aplikace skládá. Cílem je přiblížit logické rozdělení zdrojového kódu, architekturu projektu a význam jednotlivých částí, aby bylo zřejmé, jak aplikace funguje a jak jsou její funkce implementovány.
+	
+	\section{Struktura projektu ve Flutteru}
+	Aplikace FitLog byla vyvinuta pomocí frameworku Flutter, který používá jasně definovanou strukturu složek. Ta pomáhá udržovat přehlednost zdrojového kódu a oddělovat jednotlivé logické části aplikace.
+	
+	
+	\begin{itemize}
+		\item \textbf{main.dart} – hlavní vstupní bod aplikace, inicializace Firebase a definice navigace.
+		\item \textbf{screens/} – jednotlivé obrazovky aplikace (login, seznam cviků, tréninkové plány atd.).
+		\item \textbf{models/} – datové modely reprezentující entity jako cvik, uživatel nebo tréninkový plán.
+		\item \textbf{services/} – komunikace s Firebase, správa autentizace a práce s databází.
+		\item \textbf{widgets/} – opakovaně použitelné komponenty uživatelského rozhraní.
+		\item \textbf{utils/} – pomocné funkce, validace a logické nástroje.
+		\item \textbf{assets/} – statické soubory, např. obrázky a GIF animace cviků.
+	\end{itemize}
+	
+	
+	\section{Hlavní logika aplikace}
+	Hlavní logika FitLogu je založena na několika navazujících částech, které společně zajišťují funkčnost aplikace. Těmito částmi jsou:
+	
+	\begin{itemize}
+		\item \textbf{autentizace uživatelů} – zajištěna pomocí Firebase Authentication,
+		\item \textbf{správa rolí trenér / klient} – uložení role je v databázi u každého uživatele,
+		\item \textbf{správa cviků} – trenér vytváří cviky s názvem, svalovou partií a GIF animací,
+		\item \textbf{správa tréninkových plánů} – skládání tréninků z dostupných cviků,
+		\item \textbf{přiřazování plánů klientům} – trenér zvolí klienta a přiřadí mu konkrétní plán,
+		\item \textbf{zobrazení tréninku klientovi} – klient vidí své aktuální a přiřazené plány.
+	\end{itemize}
+	
+	Každý modul je implementován v oddělené části zdrojového kódu, což usnadňuje údržbu a zvyšuje stabilitu projektu.
+	
+	\section{Navigace v aplikaci}
+	Flutter používá pro řízení navigace systém takzvaných \textit{routes}, tedy cest mezi obrazovkami. FitLog využívá kombinaci klasické navigace Navigator 2.0 a přehledně definované mapy obrazovek.
+	
+	Struktura navigace například zahrnuje:
+	
+	\begin{itemize}
+		\item přihlašovací obrazovku pro všechny uživatele,
+		\item domovskou obrazovku trenéra,
+		\item domovskou obrazovku klienta,
+		\item obrazovky pro správu cviků,
+		\item obrazovky pro tvorbu a úpravu tréninkových plánů,
+		\item detailní zobrazení jednotlivých cviků a tréninků.
+	\end{itemize}
+	
+	Na základě role uživatele aplikace po přihlášení automaticky rozhodne, zda otevře rozhraní trenéra nebo klienta.
+	
+	\section{Datová struktura aplikace}
+	Aplikace využívá databázi Cloud Firestore, která pracuje s kolekcemi a dokumenty. FitLog obsahuje zejména následující kolekce:
+	
+	
+	
+	\begin{itemize}
+		\item \textbf{users} – informace o uživatelích včetně jejich role,
+		\item \textbf{exercises} – jednotlivé cviky,
+		\item \textbf{workouts} – tréninkové plány,
+		\item \textbf{assigned\_workouts} – propojení trenér → klient → trénink.
+	\end{itemize}
+	
+	Firestore umožňuje flexibilní ukládání dat a okamžitou synchronizaci, díky čemuž se změny projeví u trenéra i klienta bez nutnosti manuální obnovy stránky.
+	
+	
+	\chapter{Způsoby řešení a použité postupy}
+	
+	Tato kapitola popisuje způsob vytvoření aplikace FitLog, základní postupy vývoje, databázový model, adresářovou strukturu a funkční mechanismy, které byly využity při implementaci, včetně autentizace, komunikace a práce s multimedii.
+	
+	\section{Založení projektu}
+	
+	Projekt byl vytvořen příkazem \texttt{flutter create} a následně doplněn o potřebné balíčky pro práci s Firebase, správu stavu, zobrazení kalendáře, QR skener a podporu tmavého a světlého režimu. Po registraci aplikace ve Firebase byl stažen konfigurační soubor \texttt{google-services.json} a zapnuta potřebná rozšíření (Authentication, Firestore, Storage). Struktura projektu byla dále upravena tak, aby oddělovala modely, služby, stránky a widgety.
+	
+	\section{Databázový model }
+	
+	Databáze ve Firebase je rozdělena do několika logických kolekcí:
+	
+	\begin{itemize}
+		\item \textbf{users} – informace o uživateli, role (trainer / client), volitelně přiřazený trenér.
+		\item \textbf{exercises} – seznam cviků, včetně názvu, popisu a cesty k lokálním GIF animacím.
+		\item \textbf{workouts} – tréninkové plány vytvořené trenérem.
+		\item \textbf{workout\_exercises} – položky tréninku: série, opakování, pořadí cviků.
+		\item \textbf{assigned\_workouts} – přiřazení tréninků konkrétním klientům.
+		\item \textbf{completed\_workouts} – záznamy dokončených tréninků včetně parametrů cviků.
+		\item \textbf{chats} a \textbf{messages} – přímá komunikace mezi trenérem a klientem.
+	\end{itemize}
+	
+	Tento model podporuje správu uživatelů, plánování tréninků, ukládání historie výkonů i komunikaci v reálném čase.
+	
+	\section{Adresářová struktura}
+	
+	\begin{lstlisting}
+		lib/
+		main.dart
+		firebase_options.dart
+		core/
+		models/
+		services/
+		pages/
+		widgets/
+		themes/
+		assets/gifs/
+	\end{lstlisting}
+	
+	\begin{itemize}
+		\item \textbf{main.dart} – spouštěcí soubor aplikace a inicializace Firebase.
+		\item \textbf{firebase\_options.dart} – automatická konfigurace Firebase.
+		\item \textbf{core/} – pomocné nástroje, konstanty a logování.
+		\item \textbf{models/} – datové struktury: uživatel, trénink, cvik, zpráva.
+		\item \textbf{services/} – logika aplikace: práce s databází, autentizace, motivy aplikace, chat.
+		\item \textbf{pages/} – obrazovky aplikace: login, registrace, chat, detail cviku, přehled tréninků, kalendář, skenování QR kódu.
+		\item \textbf{widgets/} – dialogy, prvky UI a opakovaně použitelné komponenty.
+		\item \textbf{themes/} – implementace světlého a tmavého režimu.
+		\item \textbf{assets/gifs/} – lokálně uložené GIFy cviků, které se zobrazují bez potřeby internetu.
+	\end{itemize}
+	\pagebreak
+	
+	\section{Autentizace a autorizace}
+	
+	Autentizace je založená na Firebase Authentication. Uživatel se může registrovat a přihlásit pomocí e-mailu a hesla. Po přihlášení se z databáze načte jeho role, která určuje, jaké části aplikace může používat.
+	\begin{figure}[h!]
+		\centering
+		\includegraphics[width=0.45\textwidth]{image/login.png}
+		\caption{Proces autentizace uživatele v aplikaci FitLog}
+		\label{fig:autentizace}
+	\end{figure}
+	
+	\pagebreak
+	\section{QR kód určující roli}
+	
+	Pro rychlé přidělení role klienta k trenérovi byl implementován systém QR kódů:
+	
+	\begin{itemize}
+		\item Trenér vygeneruje QR kód obsahující jeho vlastní identifikátor.
+		\item Klient QR kód naskenuje, čímž je automaticky přiřazen ke správnému trenérovi.
+		\item Tím se nastaví správná datová vazba a klient následně vidí tréninky svého trenéra.
+	\end{itemize}
+	
+	Tento mechanismus odstraňuje nutnost ručního párování trenéra a klienta.
+	
+	\begin{figure}[h!]
+		\centering
+		\includegraphics[width=0.45\textwidth]{image/qr_role.png}
+		\caption{Přiřazení role klienta pomocí QR kódu trenéra}
+		\label{fig:qr-role}
+	\end{figure}
+	
+	\pagebreak
+	
+	\section{Chat s trenérem}
+	
+	Aplikace obsahuje jednosměrný i obousměrný chat, který slouží ke komunikaci mezi trenérem a klientem. Chat využívá:
+	
+	\begin{itemize}
+		\item kolekci \texttt{chats} pro definování konverzací,
+		\item kolekci \texttt{messages} pro ukládání jednotlivých zpráv,
+		\item real-time systémy Firestore pro okamžité zobrazování nových zpráv.
+	\end{itemize}
+	
+	Chat podporuje notifikaci nepřečtených zpráv, jejich označování a oddělené přístupy podle role.
+	\begin{figure}[h!]
+		\centering
+		\includegraphics[width=0.45\textwidth]{image/chat.png}
+		\caption{Komunikace trenér-klient}
+		\label{fig:chat}
+	\end{figure}
+	
+	\pagebreak
+	
+	\section{Světlý a tmavý mod}
+	
+	Aplikace umožňuje přepínání mezi světlým a tmavým režimem. Motivy jsou implementovány pomocí vlastní služby \texttt{theme\_service}, která ukládá uživatelsky preferovaný mód a aplikuje jej na celou aplikaci. Tím je zajištěna konzistentní vizuální identita a optimalizovaný kontrast i ve tmě.
+	
+	\begin{figure}[h!]
+		\centering
+		\includegraphics[width=0.45\textwidth]{image/tmavy_mod.png}
+		\caption{Tmavý mod}
+		\label{fig:dark_mode}
+	\end{figure}
+	\pagebreak
+	\section{Zobrazení GIFů cviků}
+	
+	GIF animace jednotlivých cviků jsou uloženy lokálně v adresáři \texttt{assets/gifs/}. Tento přístup má několik výhod:
+	
+	\begin{itemize}
+		\item nevyžaduje internetové připojení,
+		\item animace se načítají rychle a bez čekání,
+		\item snazší údržba a aktualizace obsahu.
+	\end{itemize}
+	
+	GIFy slouží jako vizuální ukázka správné techniky provedení cviku a jsou dostupné trenérům i klientům.
+	
+	\begin{figure}[h!]
+		\centering
+		\includegraphics[width=0.45\textwidth]{image/gif.png}
+		\caption{Gify}
+		\label{fig:gif}
+	\end{figure}
+	
+	\section{Záznamy tréninků}
+	
+	Uživatel může vytvářet nové tréninky, ukládat jejich průběh a zobrazovat je zpětně. Trenér může tvořit tréninkové plány a přidělovat je klientům. Každý trénink obsahuje seznam cviků, parametry sérií, opakování a případně zátěž.
+	
+	\subsection{Kalendář}
+	
+	Tréninky jsou zobrazeny v měsíčním kalendáři. Kliknutím na konkrétní den může uživatel:
+	
+	
+	\subsection{Filtrování a vyhledávání}
+	
+	Aplikace umožňuje filtrovat tréninky podle typu, cviku nebo času jejich provedení. Vyhledávací pole dále umožňuje rychlé nalezení tréninku podle názvu nebo klíčového slova.
+	
+	\begin{figure}[h!]
+		\centering
+		\includegraphics[width=0.45\textwidth]{image/treninky.png}
+		\caption{Přehled tréninků}
+		\label{fig:treninky}
+	\end{figure}
+	
+	
+	\section{Záznamy výkonů}
+	
+	Uživatel může evidovat a sledovat své výkony v jednotlivých disciplínách. Data jsou interpretována do grafů pomocí grafických widgetů Flutteru, což umožňuje sledovat dlouhodobý progres a motivaci.
+	
+	
+	
+	
+	
+	
+	
+	\chapter{Výsledky řešení, výstupy a uživatelský manuál}
+	
+	\section{Výsledky řešení}
+	
+	Výsledkem práce je funkční mobilní aplikace \textbf{FitLog}, která umožňuje správu tréninkových plánů v prostředí online coachingu. Aplikace splňuje hlavní cíle stanovené v úvodu práce, a to zejména:
+	
+	\begin{itemize}
+		\item vytvoření přehledného systému pro správu cviků,
+		\item možnost sestavovat tréninkové plány z dostupných cviků,
+		\item přidělování plánů ke konkrétním klientům,
+		\item přihlášení a autentizaci uživatelů pomocí Firebase,
+		\item rozlišení rolí \textit{trenér} a \textit{klient},
+		\item jednoduché uživatelské rozhraní dostupné na mobilních zařízeních.
+	\end{itemize}
+	
+	Aplikace byla otestována na několika různých zařízeních s Android systémem a její funkčnost se ukázala jako stabilní a uživatelsky přívětivá. Datová vrstva založená na \textit{Firebase Cloud Firestore} umožňuje rychlou a bezpečnou práci s uloženými informacemi v reálném čase. 
+	
+	V rámci vývoje vznikl také základní chat mezi trenérem a klientem, temný a světlý režim aplikace, a implementace lokálně uložených GIF animací, které zvyšují přehlednost cviků pro klienta.
+	
+	\section{Splněné a nesplněné cíle}
+	
+	\textbf{Splněné cíle:}
+	
+	\begin{itemize}
+		\item Implementace registrace a přihlášení pomocí Firebase Authentication.
+		\item Plné rozlišení uživatelských rolí a přidělování tréninkových plánů.
+		\item Možnost vytvářet cviky včetně GIF animace a cílové svalové partie.
+		\item Sestavení a úprava tréninkových plánů.
+		\item Zobrazení přiřazených tréninků klientovi.
+		\item Přepínání světlého a tmavého režimu.
+		\item In-app chat pro komunikaci trenéra s klientem.
+	\end{itemize}
+	
+	\textbf{Nesplněné cíle a možné rozšíření:}
+	
+	\begin{itemize}
+		\item Pokročilé statistiky výkonnosti uživatele.
+		\item Možnost ukládání historie tréninků a dlouhodobý progres.
+		\item Podpora iOS verze aplikace.
+		\item Plné testovací pokrytí všech obrazovek aplikace.
+	\end{itemize}
+	
+	
+	\chapter*{Závěr}
+	\addcontentsline{toc}{chapter}{Závěr}
+	
+	Cílem této závěrečné práce bylo navrhnout a realizovat mobilní aplikaci FitLog, která usnadní komunikaci mezi osobním trenérem a jeho klienty v rámci online coachingu a poskytne moderní prostředí pro správu tréninkových plánů. Na základě provedené analýzy problému a následného návrhu řešení vznikla aplikace, která splňuje většinu stanovených požadavků a představuje plně funkční základ pro další rozvoj.
+	
+	Ústředním přínosem projektu je vytvoření jednotné platformy, která řeší nepřehlednost a roztříštěnost tréninkových plánů běžně sdílených prostřednictvím textových zpráv. FitLog umožňuje trenérům vytvářet vlastní databázi cviků, sestavovat personalizované tréninkové plány a přiřazovat je jednotlivým klientům. Klienti mají přístup k přehlednému zobrazení tréninku a mohou si snadno prohlížet jednotlivé cviky včetně animací. Implementace rolí trenér a klient pomocí Firebase Authentication umožnila bezpečné a jednoznačné přiřazení tréninků i komunikaci prostřednictvím integrovaného chatu.
+	
+	Technologiemi zvolenými pro vývoj byly Flutter a Firebase, které se ukázaly jako vhodné zejména díky své multiplatformní podpoře, jednoduché integraci cloudových služeb a stabilní práci s daty v reálném čase. Vývoj aplikace přinesl také důležité zkušenosti s architekturou mobilních aplikací, návrhem datových modelů, ukládáním uživatelských dat, správou animací a optimalizací výkonu.
+	
+	I když se podařilo úspěšně splnit většinu stanovených cílů, některé plánované funkcionality nebyly z důvodu časové náročnosti realizovány. Jedná se například o pokročilé statistiky výkonu uživatelů, ukládání historie tréninků či podporu pro platformu iOS. Tyto oblasti představují potenciální směr dalšího rozvoje aplikace a mohou významně zvýšit její hodnotu a využitelnost v praxi.
+	
+	Projekt FitLog tak přináší kvalitní základ moderního nástroje pro osobní trenéry i jejich klienty. Práce ukazuje, že je možné vytvořit funkční, přehlednou a praktickou mobilní aplikaci využitelnou v reálném prostředí. Zároveň představuje významnou zkušenost v oblasti vývoje mobilních aplikací a poskytuje prostor pro další technické i funkční rozšiřování.
+	
+	
+	\begin{thebibliography}{99}
+		
+		\bibitem{flutterDocs}
+		Google. \textit{Flutter Documentation}. [online]. Dostupné z: \url{https://docs.flutter.dev} [cit. 2025-09-12].
+		
+		\bibitem{dartLang}
+		Google. \textit{Dart Programming Language}. [online]. Dostupné z: \url{https://dart.dev} [cit. 2025-09-18].
+		
+		\bibitem{firebaseDocs}
+		Google Firebase. \textit{Firebase Documentation}. [online]. Dostupné z: \url{https://firebase.google.com/docs} [cit. 2025-09-24].
+		
+		\bibitem{firestoreModeling}
+		Firebase. \textit{Data Modeling in Cloud Firestore}. [online]. Dostupné z: \url{https://firebase.google.com/docs/firestore/data-model} [cit. 2025-10-02].
+		
+		\bibitem{flutterStateManagement}
+		Flutter Dev Community. \textit{State Management Options in Flutter}. [online]. Dostupné z: \url{https://flutter.dev/docs/development/data-and-backend/state-mgmt/intro} [cit. 2025-10-10].
+		
+		\bibitem{flutterUI}
+		Flutter Codelabs. \textit{Building Beautiful UIs with Flutter}. [online]. Dostupné z: \url{https://codelabs.developers.google.com/flutter} [cit. 2025-10-16].
+		
+		\bibitem{providerPackage}
+		Flutter Community. \textit{Provider Package Documentation}. [online]. Dostupné z: \url{https://pub.dev/packages/provider} [cit. 2025-10-22].
+		
+		\bibitem{flutterAnimations}
+		Google Developers. \textit{Flutter Animation Guide}. [online]. Dostupné z: \url{https://docs.flutter.dev/ui/animations} [cit. 2025-10-30].
+		
+		\bibitem{firebaseAuth}
+		Firebase. \textit{Firebase Authentication}. [online]. Dostupné z: \url{https://firebase.google.com/docs/auth} [cit. 2025-11-05].
+		
+		\bibitem{firestoreSecurity}
+		Firebase. \textit{Firestore Security Rules}. [online]. Dostupné z: \url{https://firebase.google.com/docs/firestore/security/get-started} [cit. 2025-11-12].
+		
+		\bibitem{flutterRouting}
+		Flutter Dev. \textit{Navigation and Routing}. [online]. Dostupné z: \url{https://docs.flutter.dev/ui/navigation} [cit. 2025-11-20].
+		
+		\bibitem{flutterResponsive}
+		Flutter Community. \textit{Responsive Layouts in Flutter}. [online]. Dostupné z: \url{https://medium.com/flutter} [cit. 2025-11-27].
+		
+		\bibitem{flutterLear}
+		Flutter Dev. \textit{Flutter basics}. [online]. Dostupné z: \url{https://flutter.dev/learn} [cit. 2025-11-27].
+		
+		\bibitem{flutterTesting}
+		Flutter Docs. \textit{Testing Flutter Apps}. [online]. Dostupné z: \url{https://docs.flutter.dev/testing} [cit. 2025-12-12].
+		
+		\bibitem{firestoreIndexes}
+		Firebase. \textit{Managing Indexes in Cloud Firestore}. [online]. Dostupné z: \url{https://firebase.google.com/docs/firestore/query-data/indexing} [cit. 2025-12-18].
+		
+		\bibitem{flutterDeployment}
+		Flutter Dev. \textit{Deploying Flutter Applications}. [online]. Dostupné z: \url{https://docs.flutter.dev/deployment} [cit. 2025-12-22].
+		
+		\bibitem{materialDesign}
+		Google. \textit{Material Design Guidelines}. [online]. Dostupné z: \url{https://m3.material.io} [cit. 2025-12-29].
+		
+	\end{thebibliography}
+	
+	
+	%% obrázky 
+	\listoffigures
+	
+	%% tabulky
+	%\listoftables
+	
+	\appendix %% začínají přílohy
+	
+	\titleformat{\chapter}[block]{\scshape\bfseries\LARGE}{Příloha \thechapter}{10pt}{\vspace{0pt}}[\vspace{-22pt}] %% nastavení nadpisu u příloh
+	
+	
+	
+\end{document}

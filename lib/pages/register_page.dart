@@ -243,7 +243,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                   ? null
                                   : () => Navigator.pop(context),
                               child: Text(
-                                "Přihlas se",
+                                "Přihlaš se",
                                 style: TextStyle(
                                   color: _isLoading
                                       ? Colors.grey
