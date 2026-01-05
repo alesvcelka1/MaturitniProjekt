@@ -1,26 +1,28 @@
-# 🏋️‍♂️ Maturitní projekt – Fitness App
+# Maturitní projekt – Fitness aplikace
 
-Aplikace vyvíjená ve Flutteru jako maturitní projekt.  
-Cílem je vytvořit **osobní fitness deník** s možností online coachingu – trenér může posílat tréninky a klient je může vyplňovat, sledovat progres a nahrávat videa pro zpětnou vazbu.
-
----
-
-## ✨ Funkce
-- ⏳ Přehledné zobrazení tréninků (cviky, série, opakování, váhy)  
-- ⏳ Přihlášení uživatele (Firebase Auth)  
-- ⏳ Nahrávání a přehrávání videí k cvikům (Firebase Storage)  
-- ⏳ Ukládání tréninků do databáze (Firebase Firestore)  
-- ⏳ Role trenér / klient (odlišné pohledy)  
-- ⏳ Statistiky a grafy pokroku  
-- ⏳ Offline režim (SQLite)  
+Aplikace je vyvíjena ve frameworku **Flutter** jako maturitní projekt.  
+Cílem projektu je vytvořit **osobní fitness deník** s možností online coachingu, kde trenér může svým klientům přiřazovat tréninkové plány a klient je může může vyplňovat, sledovat svůj pokrok a nahrávat videa ke cvikům pro zpětnou vazbu.
 
 ---
 
-## 🛠 Použité technologie
-- [Flutter](https://flutter.dev/) – multiplatformní framework  
-- [Dart](https://dart.dev/) – programovací jazyk  
-- [Firebase](https://firebase.google.com/) – autentizace, databáze a ukládání videí  
-- [SQLite](https://www.sqlite.org/) – lokální ukládání (plánováno)  
+## Funkce aplikace
+
+- Přehledné zobrazení tréninkových plánů (cviky, série, opakování, váhy)
+- Přihlášení a registrace uživatelů pomocí Firebase Authentication
+- Nahrávání a přehrávání videí ke cvikům pomocí Firebase Storage
+- Ukládání tréninkových dat do databáze Firebase Firestore
+- Rozdělení uživatelských rolí na trenéra a klienta s odlišnými pohledy aplikace
+- Statistiky a grafy zobrazující pokrok uživatele
+- Offline režim aplikace pomocí lokální databáze SQLite (plánováno)
 
 ---
->>>>>>> 
+
+## Použité technologie
+
+- **Flutter** – multiplatformní framework pro vývoj mobilních aplikací  
+- **Dart** – programovací jazyk použitý pro vývoj aplikace  
+- **Firebase** – backendové služby zahrnující autentizaci, databázi a úložiště souborů  
+  - Firebase Authentication  
+  - Firebase Firestore  
+  - Firebase Storage  
+- **SQLite** – lokální databáze pro offline režim aplikace (plánováno)
