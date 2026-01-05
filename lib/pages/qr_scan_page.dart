@@ -43,14 +43,12 @@ class _QrScanPageState extends State<QrScanPage> {
         return;
       }
 
-      // Krok 2: Extrakce ID trenéra z QR kódu
-      final String trainerId = qrData.substring(8); // Odstraní "trainer:"
+      final String trainerId = qrData.substring(8);
       if (trainerId.isEmpty) {
         _showErrorSnackBar('Neplatné ID trenéra v QR kódu!');
         return;
       }
 
-      // Krok 3: Získání aktuálního uživatele (klienta)
       final User? currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) {
         _showErrorSnackBar('Nejsi přihlášený!');

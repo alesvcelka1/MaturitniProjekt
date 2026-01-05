@@ -46,7 +46,8 @@ class _SharedHomePageState extends State<SharedHomePage> {
 
     return StreamBuilder<DocumentSnapshot>(
       stream: _firestore.collection('users').doc(_currentUser.uid).snapshots(),
-      builder: (context, snapshot) {
+      builder: (context, snapshot) 
+      {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
