@@ -1,5 +1,7 @@
 # Maturitní projekt – Fitness aplikace
+
 ODKAZ NA VIDEOPREZENTACI - https://youtu.be/Rvt3p6fX7eE
+
 Aplikace je vyvíjena ve frameworku **Flutter** jako maturitní projekt.  
 Cílem projektu je vytvořit **osobní fitness deník** s možností online coachingu, kde trenér může svým klientům přiřazovat tréninkové plány a klient je může může vyplňovat, sledovat svůj pokrok a nahrávat videa ke cvikům pro zpětnou vazbu.
 
